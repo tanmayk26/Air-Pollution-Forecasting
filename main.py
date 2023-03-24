@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.model_selection import train_test_split
+
 import toolkit
 
 # to display all the columns
@@ -40,5 +42,16 @@ plt.figure(figsize=(16, 8))
 sns.heatmap(corr, annot=True, cmap='BrBG')
 plt.title('Correlation Heatmap', fontsize=18)
 plt.show()
+
+# split train-test 80-20
+X_train, X_test, y_train, y_test = train_test_split(df.iloc[:, :-1], df['pollution'], shuffle=False, test_size=0.2)
+
+print(f'Training set size: {len(X_train)} rows and {len(X_train.columns)+1} columns')
+print(f'Testing set size: {len(X_test)} rows and {len(X_test.columns)+1} columns')
+
+toolkit.ADF_Cal(df['pollution'])
+toolkit.kpss_test(df['pollution'])
+toolkit.CalRollingMeanVarGraph(df, 'pollution')
+
 
 
