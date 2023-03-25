@@ -25,6 +25,8 @@ print(f'Data basic statistics: \n{df.describe()}')
 # Check NA value
 print(f'NA value: \n{df.isna().sum()}')
 # As we can see there are no null values
+
+# Plotting dependent variable vs time
 plt.plot(list(df.index.values), df['pollution'])
 plt.xlabel('Time')
 plt.ylabel('Pollution')
@@ -34,7 +36,7 @@ plt.tight_layout()
 plt.show()
 
 # ACF Plot
-toolkit.Cal_autocorr_plot(df['pollution'], 100)
+toolkit.Cal_autocorr_plot(df['pollution'], lags=100)
 
 # Correlation Matrix
 corr = df.corr()
