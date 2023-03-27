@@ -27,7 +27,7 @@ print(f'NA value: \n{df.isna().sum()}')
 # As we can see there are no null values
 
 # Plotting dependent variable vs time
-plt.figure(figsize=(20, 14))
+plt.figure(figsize=(16, 8))
 plt.plot(list(df.index.values), df['pollution'])
 plt.xlabel('Time')
 plt.ylabel('Pollution')
