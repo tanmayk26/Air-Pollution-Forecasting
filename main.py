@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from statsmodels.tsa.seasonal import STL
 from sklearn.model_selection import train_test_split
 
 import toolkit
@@ -68,7 +69,7 @@ print('KPSS test on diff_order_1:-')
 toolkit.kpss_test(df['diff_order_1'][1:])
 
 # ACF Plot on transformed data
-toolkit.Cal_autocorr_plot(df['diff_order_1'][1:], lags=20)
+toolkit.Cal_autocorr_plot(df['diff_order_1'][1:], lags=30)
 
 # Transforming data to make it stationary
 df['diff_order_2'] = toolkit.differencing(df['diff_order_1'], 2)
@@ -81,5 +82,29 @@ print('KPSS test on diff_order_2:-')
 toolkit.kpss_test(df['diff_order_2'][2:])
 
 # ACF Plot on transformed data
-toolkit.Cal_autocorr_plot(df['diff_order_2'][2:], lags=20)
+toolkit.Cal_autocorr_plot(df['diff_order_2'][2:], lags=100)
+
+# STL Decomposition
+Pollution = pd.Series(df['pollution'].values, index = date, name = 'pollution')
+STL = STL(Pollution, period=24)
+res = STL.fit()
+
+T = res.trend
+S = res.seasonal
+R = res.resid
+
+plt.figure(figsize=(16, 8))
+# This
+#fig = res.plot()
+#plt.show()
+# Or
+plt.plot(df.index, T.values,label='trend')
+plt.plot(df.index, S.values,label='Seasonal')
+plt.plot(df.index, R.values,label='residuals')
+plt.xlabel('Year')
+plt.ylabel('Temperature')
+plt.title('STL Decomposition')
+plt.legend(loc='upper right')
+plt.tight_layout()
+plt.show()
 
