@@ -83,5 +83,3 @@ toolkit.kpss_test(df['diff_order_2'][2:])
 # ACF Plot on transformed data
 toolkit.Cal_autocorr_plot(df['diff_order_2'][2:], lags=20)
 
-
-
