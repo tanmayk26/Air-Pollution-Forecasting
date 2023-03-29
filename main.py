@@ -40,6 +40,12 @@ plt.show()
 # ACF Plot
 toolkit.Cal_autocorr_plot(df['pollution'], lags=100, title='ACF Plot for Pollution')
 
+# Strongly seasonal. Partially stationarity. looking at local peaks (~) and overall decreasing residuals in ACF, stationarity in ADF and rolling mean being stable for raw data. Need to check order by looking at PACF plot. Depending on that, decide whether to difference or not
+# probably need to use SARIMA. Multiplicative model.
+
+# DASH app. Different Tabs. Enter order. display ACF/PACF, ADF., etc.
+
+
 # Correlation Matrix
 corr = df.corr()
 plt.figure(figsize=(16, 8))
@@ -85,31 +91,32 @@ toolkit.kpss_test(df['diff_order_2'][2:])
 toolkit.Cal_autocorr_plot(df['diff_order_2'][2:], lags=50, title='ACF Plot for Pollution (diff_2)')
 
 # STL Decomposition
-Pollution = pd.Series(df['pollution'].values, index = date, name = 'pollution')
-STL = STL(Pollution, period=24)
-res = STL.fit()
+# Pollution = pd.Series(df['pollution'].values, index = date, name = 'pollution')
 
-T = res.trend
-S = res.seasonal
-R = res.resid
-
-plt.figure(figsize=(16, 8))
-# This
-#fig = res.plot()
-#plt.show()
+# STL = STL(Pollution, period=24)
+# res = STL.fit()
+#
+# T = res.trend
+# S = res.seasonal
+# R = res.resid
+#
+# plt.figure(figsize=(16, 8))
+# # This
+# fig = res.plot()
+# plt.show()
 # Or
-plt.plot(df.index, T.values,label='trend')
-plt.plot(df.index, S.values,label='Seasonal')
-plt.plot(df.index, R.values,label='residuals')
-plt.xlabel('Year')
-plt.ylabel('Pollution')
-plt.title('STL Decomposition')
-plt.legend(loc='upper right')
-plt.tight_layout()
-plt.show()
-
-str_trend = max(0, 1-(np.var(R)/np.var(T+R)))
-print(f'The strength of trend for this data set is {round(str_trend, 3)}.')
-
-str_seasonality = max(0, 1-(np.var(R)/np.var(S+R)))
-print(f'The strength of seasonality for this data set is {round(str_seasonality, 3)}.')
+# plt.plot(df.index, T.values,label='trend')
+# plt.plot(df.index, S.values,label='Seasonal')
+# plt.plot(df.index, R.values,label='residuals')
+# plt.xlabel('Year')
+# plt.ylabel('Pollution')
+# plt.title('STL Decomposition')
+# plt.legend(loc='upper right')
+# plt.tight_layout()
+# plt.show()
+#
+# str_trend = max(0, 1-(np.var(R)/np.var(T+R)))
+# print(f'The strength of trend for this data set is {round(str_trend, 3)}.')
+#
+# str_seasonality = max(0, 1-(np.var(R)/np.var(S+R)))
+# print(f'The strength of seasonality for this data set is {round(str_seasonality, 3)}.')
