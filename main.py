@@ -38,7 +38,7 @@ plt.tight_layout()
 plt.show()
 
 # ACF Plot
-toolkit.Cal_autocorr_plot(df['pollution'], lags=100)
+toolkit.Cal_autocorr_plot(df['pollution'], lags=100, title='ACF Plot for Pollution')
 
 # Correlation Matrix
 corr = df.corr()
@@ -69,7 +69,7 @@ print('KPSS test on diff_order_1:-')
 toolkit.kpss_test(df['diff_order_1'][1:])
 
 # ACF Plot on transformed data
-toolkit.Cal_autocorr_plot(df['diff_order_1'][1:], lags=30)
+toolkit.Cal_autocorr_plot(df['diff_order_1'][1:], lags=50, title='ACF Plot for Pollution (diff_1)')
 
 # Transforming data to make it stationary
 df['diff_order_2'] = toolkit.differencing(df['diff_order_1'], 2)
@@ -82,7 +82,7 @@ print('KPSS test on diff_order_2:-')
 toolkit.kpss_test(df['diff_order_2'][2:])
 
 # ACF Plot on transformed data
-toolkit.Cal_autocorr_plot(df['diff_order_2'][2:], lags=100)
+toolkit.Cal_autocorr_plot(df['diff_order_2'][2:], lags=50, title='ACF Plot for Pollution (diff_2)')
 
 # STL Decomposition
 Pollution = pd.Series(df['pollution'].values, index = date, name = 'pollution')

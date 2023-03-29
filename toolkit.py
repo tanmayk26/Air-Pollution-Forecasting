@@ -103,6 +103,7 @@ def Cal_autocorr_plot(y, lags, title='ACF Plot', plot_show='Yes'):
     lags_final.extend(lags[:0:-1])
     lags_final = [value*(-1) for value in lags_final]
     lags_final.extend(lags)
+    plt.figure(figsize=(12, 8))
     markers, stemlines, baseline = plt.stem(lags_final, ryy_final)
     plt.setp(markers, color='red', marker='o')
     plt.axhspan((-1.96 / np.sqrt(len(y))), (1.96 / np.sqrt(len(y))), alpha=0.2, color='blue')
