@@ -47,6 +47,16 @@ def differencing(series, order=1):
     return diff
 
 
+# create a differenced series
+def seasonal_differencing(series, seasons=1, order=1):
+    diff = []
+    for i in range(seasons):
+        diff.append(np.nan)
+    for i in range(seasons, len(series)):
+        diff.append(series[i] - series[i - seasons])
+    return diff
+
+
 # Augmented Dickey-Fuller test (for stationarity)
 # For this test, we state the following Null hypothesis (H0) and alternative hypothesis (H1):
 # H0: The time-series has a unit root, meaning it is non-stationary.
@@ -393,3 +403,16 @@ def ma2_dslim_method(N, order, coef, mean=1, std=1):
     return y_dlsim.reshape(-1), e
 
 
+import statsmodels.api as sm
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+def ACF_PACF_Plot(y,lags):
+    acf = sm.tsa.stattools.acf(y, nlags=lags)
+    pacf = sm.tsa.stattools.pacf(y, nlags=lags)
+    fig = plt.figure()
+    plt.subplot(211)
+    plt.title('ACF/PACF of the raw data')
+    plot_acf(y, ax=plt.gca(), lags=lags)
+    plt.subplot(212)
+    plot_pacf(y, ax=plt.gca(), lags=lags)
+    fig.tight_layout(pad=3)
+    plt.show()

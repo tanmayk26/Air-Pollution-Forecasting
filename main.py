@@ -38,14 +38,170 @@ plt.tight_layout()
 plt.show()
 
 # ACF Plot
-toolkit.Cal_autocorr_plot(df['pollution'], lags=100, title='ACF Plot for Pollution')
+# toolkit.Cal_autocorr_plot(df['pollution'], lags=100, title='ACF Plot for Pollution')
 
-# Strongly seasonal. Partially stationarity. looking at local peaks (~) and overall decreasing residuals in ACF, stationarity in ADF and rolling mean being stable for raw data. Need to check order by looking at PACF plot. Depending on that, decide whether to difference or not
-# probably need to use SARIMA. Multiplicative model.
+# ACF/PACF plot raw data
+toolkit.ACF_PACF_Plot(df['pollution'], lags=60)
 
-# DASH app. Different Tabs. Enter order. display ACF/PACF, ADF., etc.
+# Stationarity Tests on raw data
+toolkit.ADF_Cal(df['pollution'])
+toolkit.kpss_test(df['pollution'])
+toolkit.CalRollingMeanVarGraph(df, 'pollution')
 
 
+# STL Decomposition
+Pollution = pd.Series(df['pollution'].values, index = date, name = 'pollution')
+
+STL_raw = STL(Pollution, period=24)
+res = STL_raw.fit()
+
+T = res.trend
+S = res.seasonal
+R = res.resid
+
+plt.figure(figsize=(16, 8))
+# This
+fig = res.plot()
+plt.show()
+# Or
+# plt.plot(df.index, T.values,label='trend')
+# plt.plot(df.index, S.values,label='Seasonal')
+# plt.plot(df.index, R.values,label='residuals')
+# plt.xlabel('Year')
+# plt.ylabel('Pollution')
+# plt.title('STL Decomposition')
+# plt.legend(loc='upper right')
+# plt.tight_layout()
+# plt.show()
+
+str_trend = max(0, 1-(np.var(R)/np.var(T+R)))
+print(f'The strength of trend for this data set is {round(str_trend, 3)}.')
+
+str_seasonality = max(0, 1-(np.var(R)/np.var(S+R)))
+print(f'The strength of seasonality for this data set is {round(str_seasonality, 3)}.')
+
+
+
+s = 20
+df['seasonal_d_o_1_20'] = toolkit.seasonal_differencing(df['pollution'], seasons=s)
+#print(df[['pollution', 'seasonal_d_o_1']].head(60))
+
+# Plotting dependent variable vs time
+plt.figure(figsize=(16, 8))
+plt.plot(list(df.index.values), df['seasonal_d_o_1_20'])
+plt.xlabel('Time')
+plt.ylabel('seasonal_d_o_1_20')
+plt.title('Pollution over Time')
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+# Stationarity on seasonaly differenced data
+toolkit.ACF_PACF_Plot(df['seasonal_d_o_1_20'][s:], lags=60)
+toolkit.ADF_Cal(df['seasonal_d_o_1_20'][s:])
+toolkit.kpss_test(df['seasonal_d_o_1_20'][s:])
+toolkit.CalRollingMeanVarGraph(df[s:], 'seasonal_d_o_1_20')
+
+
+
+# Deseasoned data
+
+# STL Decomposition
+Pollution = pd.Series(df['seasonal_d_o_1_20'][s:].values, index = df[s:].index.values, name = 'seasonal_d_o_1_20')
+
+STL_tf = STL(Pollution)
+res = STL_tf.fit()
+
+T = res.trend
+S = res.seasonal
+R = res.resid
+
+plt.figure(figsize=(16, 8))
+# This
+fig = res.plot()
+plt.show()
+# Or
+# plt.plot(df.index, T.values,label='trend')
+# plt.plot(df.index, S.values,label='Seasonal')
+# plt.plot(df.index, R.values,label='residuals')
+# plt.xlabel('Year')
+# plt.ylabel('Pollution')
+# plt.title('STL Decomposition')
+# plt.legend(loc='upper right')
+# plt.tight_layout()
+# plt.show()
+
+str_trend = max(0, 1-(np.var(R)/np.var(T+R)))
+print(f'The strength of trend for seasonal_d_o_1_20 is {round(str_trend, 3)}.')
+
+str_seasonality = max(0, 1-(np.var(R)/np.var(S+R)))
+print(f'The strength of seasonality for seasonal_d_o_1_20 is {round(str_seasonality, 3)}.')
+
+
+
+# Seasonal Differencing
+s = 24
+df['seasonal_d_o_1'] = toolkit.seasonal_differencing(df['pollution'], seasons=s)
+#print(df[['pollution', 'seasonal_d_o_1']].head(60))
+
+# Plotting dependent variable vs time
+plt.figure(figsize=(16, 8))
+plt.plot(list(df.index.values), df['seasonal_d_o_1'])
+plt.xlabel('Time')
+plt.ylabel('seasonal_d_o_1')
+plt.title('Pollution over Time')
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+# Stationarity on seasonaly differenced data
+toolkit.ACF_PACF_Plot(df['seasonal_d_o_1'][s:], lags=60)
+toolkit.ADF_Cal(df['seasonal_d_o_1'][s:])
+toolkit.kpss_test(df['seasonal_d_o_1'][s:])
+toolkit.CalRollingMeanVarGraph(df[s:], 'seasonal_d_o_1')
+
+# Deseasoned data
+
+# STL Decomposition
+Pollution = pd.Series(df['seasonal_d_o_1'][s:].values, index = df[s:].index.values, name = 'seasonal_d_o_1')
+
+STL_tf = STL(Pollution)
+res = STL_tf.fit()
+
+T = res.trend
+S = res.seasonal
+R = res.resid
+
+plt.figure(figsize=(16, 8))
+# This
+fig = res.plot()
+plt.show()
+# Or
+# plt.plot(df.index, T.values,label='trend')
+# plt.plot(df.index, S.values,label='Seasonal')
+# plt.plot(df.index, R.values,label='residuals')
+# plt.xlabel('Year')
+# plt.ylabel('Pollution')
+# plt.title('STL Decomposition')
+# plt.legend(loc='upper right')
+# plt.tight_layout()
+# plt.show()
+
+str_trend = max(0, 1-(np.var(R)/np.var(T+R)))
+print(f'The strength of trend for seasonal_d_o_1 is {round(str_trend, 3)}.')
+
+str_seasonality = max(0, 1-(np.var(R)/np.var(S+R)))
+print(f'The strength of seasonality for seasonal_d_o_1 is {round(str_seasonality, 3)}.')
+
+
+#
+# # Strongly seasonal. Partially stationarity. looking at local peaks (~) and overall decreasing residuals in ACF, stationarity in ADF
+# # and rolling mean being stable for raw data. Need to check order by looking at PACF plot.
+# # Depending on that, decide whether to difference or not probably need to use SARIMA. Multiplicative model.
+#
+# # DASH app. Different Tabs. Enter order. display ACF/PACF, ADF., etc.
+#
+#
 # Correlation Matrix
 corr = df.corr()
 plt.figure(figsize=(16, 8))
@@ -59,51 +215,72 @@ X_train, X_test, y_train, y_test = train_test_split(df.iloc[:, :-1], df['polluti
 print(f'Training set size: {len(X_train)} rows and {len(X_train.columns)+1} columns')
 print(f'Testing set size: {len(X_test)} rows and {len(X_test.columns)+1} columns')
 
-# Stationarity Tests on raw data
-toolkit.ADF_Cal(df['pollution'])
-toolkit.kpss_test(df['pollution'])
-toolkit.CalRollingMeanVarGraph(df, 'pollution')
 
-# Transforming data to make it stationary
-df['diff_order_1'] = toolkit.differencing(df['pollution'], 1)
+
+#
+# # Transforming data to make it stationary
+df['diff_order_1'] = toolkit.differencing(df['seasonal_d_o_1'], s)
+
+# Plotting dependent variable vs time
+plt.figure(figsize=(16, 8))
+plt.plot(list(df.index.values), df['diff_order_1'])
+plt.xlabel('Time')
+plt.ylabel('diff_order_1')
+plt.title('Pollution over Time')
+plt.legend()
+plt.tight_layout()
+plt.show()
 
 # Stationarity Tests on transformed data
-toolkit.CalRollingMeanVarGraph(df[1:], 'diff_order_1')
+toolkit.ACF_PACF_Plot(df['diff_order_1'][s+1:], lags=60)
+toolkit.CalRollingMeanVarGraph(df[s+1:], 'diff_order_1')
 print('ADF test on diff_order_1:-')
-toolkit.ADF_Cal(df['diff_order_1'][1:])
+toolkit.ADF_Cal(df['diff_order_1'][s+1:])
 print('KPSS test on diff_order_1:-')
-toolkit.kpss_test(df['diff_order_1'][1:])
+toolkit.kpss_test(df['diff_order_1'][s+1:])
 
-# ACF Plot on transformed data
-toolkit.Cal_autocorr_plot(df['diff_order_1'][1:], lags=50, title='ACF Plot for Pollution (diff_1)')
 
-# Transforming data to make it stationary
-df['diff_order_2'] = toolkit.differencing(df['diff_order_1'], 2)
+#
+# # ACF Plot on transformed data
+# toolkit.Cal_autocorr_plot(df['diff_order_1'][1:], lags=50, title='ACF Plot for Pollution (diff_1)')
+#
+# # Transforming data to make it stationary
+# df['diff_order_2'] = toolkit.differencing(df['diff_order_1'], 2)
+#
+# # Stationarity Tests on transformed data
+# toolkit.CalRollingMeanVarGraph(df[2:], 'diff_order_2')
+# print('ADF test on diff_order_2:-')
+# toolkit.ADF_Cal(df['diff_order_2'][2:])
+# print('KPSS test on diff_order_2:-')
+# toolkit.kpss_test(df['diff_order_2'][2:])
+#
+# # ACF Plot on transformed data
+# toolkit.Cal_autocorr_plot(df['diff_order_2'][2:], lags=50, title='ACF Plot for Pollution (diff_2)')
+#
 
-# Stationarity Tests on transformed data
-toolkit.CalRollingMeanVarGraph(df[2:], 'diff_order_2')
-print('ADF test on diff_order_2:-')
-toolkit.ADF_Cal(df['diff_order_2'][2:])
-print('KPSS test on diff_order_2:-')
-toolkit.kpss_test(df['diff_order_2'][2:])
 
-# ACF Plot on transformed data
-toolkit.Cal_autocorr_plot(df['diff_order_2'][2:], lags=50, title='ACF Plot for Pollution (diff_2)')
+
+
+
+
+
+
+# diff
 
 # STL Decomposition
-# Pollution = pd.Series(df['pollution'].values, index = date, name = 'pollution')
+Pollution = pd.Series(df['diff_order_1'][s+1:].values, index = df[s+1:].index.values, name = 'diff_order_1')
 
-# STL = STL(Pollution, period=24)
-# res = STL.fit()
-#
-# T = res.trend
-# S = res.seasonal
-# R = res.resid
-#
-# plt.figure(figsize=(16, 8))
-# # This
-# fig = res.plot()
-# plt.show()
+STL_tf = STL(Pollution)
+res = STL_tf.fit()
+
+T = res.trend
+S = res.seasonal
+R = res.resid
+
+plt.figure(figsize=(16, 8))
+# This
+fig = res.plot()
+plt.show()
 # Or
 # plt.plot(df.index, T.values,label='trend')
 # plt.plot(df.index, S.values,label='Seasonal')
@@ -114,9 +291,10 @@ toolkit.Cal_autocorr_plot(df['diff_order_2'][2:], lags=50, title='ACF Plot for P
 # plt.legend(loc='upper right')
 # plt.tight_layout()
 # plt.show()
-#
-# str_trend = max(0, 1-(np.var(R)/np.var(T+R)))
-# print(f'The strength of trend for this data set is {round(str_trend, 3)}.')
-#
-# str_seasonality = max(0, 1-(np.var(R)/np.var(S+R)))
-# print(f'The strength of seasonality for this data set is {round(str_seasonality, 3)}.')
+
+str_trend = max(0, 1-(np.var(R)/np.var(T+R)))
+print(f'The strength of trend for diff_order_1 is {round(str_trend, 3)}.')
+
+str_seasonality = max(0, 1-(np.var(R)/np.var(S+R)))
+print(f'The strength of seasonality for diff_order_1 is {round(str_seasonality, 3)}.')
+
