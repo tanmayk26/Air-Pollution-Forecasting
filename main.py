@@ -27,6 +27,20 @@ print(f'Data basic statistics: \n{df.describe()}')
 print(f'NA value: \n{df.isna().sum()}')
 # As we can see there are no null values
 
+# Correlation Matrix
+corr = df.corr()
+plt.figure(figsize=(16, 8))
+sns.heatmap(corr, annot=True, cmap='BrBG')
+plt.title('Correlation Heatmap', fontsize=18)
+plt.show()
+
+# split train-test 80-20
+X_train, X_test, y_train, y_test = train_test_split(df.iloc[:, :-1], df['pollution'], shuffle=False, test_size=0.2)
+
+print(f'Training set size: {len(X_train)} rows and {len(X_train.columns)+1} columns')
+print(f'Testing set size: {len(X_test)} rows and {len(X_test.columns)+1} columns')
+
+
 # Plotting dependent variable vs time
 plt.figure(figsize=(16, 8))
 plt.plot(list(df.index.values), df['pollution'])
@@ -63,79 +77,12 @@ plt.figure(figsize=(16, 8))
 # This
 fig = res.plot()
 plt.show()
-# Or
-# plt.plot(df.index, T.values,label='trend')
-# plt.plot(df.index, S.values,label='Seasonal')
-# plt.plot(df.index, R.values,label='residuals')
-# plt.xlabel('Year')
-# plt.ylabel('Pollution')
-# plt.title('STL Decomposition')
-# plt.legend(loc='upper right')
-# plt.tight_layout()
-# plt.show()
 
 str_trend = max(0, 1-(np.var(R)/np.var(T+R)))
 print(f'The strength of trend for this data set is {round(str_trend, 3)}.')
 
 str_seasonality = max(0, 1-(np.var(R)/np.var(S+R)))
 print(f'The strength of seasonality for this data set is {round(str_seasonality, 3)}.')
-
-
-
-s = 20
-df['seasonal_d_o_1_20'] = toolkit.seasonal_differencing(df['pollution'], seasons=s)
-#print(df[['pollution', 'seasonal_d_o_1']].head(60))
-
-# Plotting dependent variable vs time
-plt.figure(figsize=(16, 8))
-plt.plot(list(df.index.values), df['seasonal_d_o_1_20'])
-plt.xlabel('Time')
-plt.ylabel('seasonal_d_o_1_20')
-plt.title('Pollution over Time')
-plt.legend()
-plt.tight_layout()
-plt.show()
-
-# Stationarity on seasonaly differenced data
-toolkit.ACF_PACF_Plot(df['seasonal_d_o_1_20'][s:], lags=60)
-toolkit.ADF_Cal(df['seasonal_d_o_1_20'][s:])
-toolkit.kpss_test(df['seasonal_d_o_1_20'][s:])
-toolkit.CalRollingMeanVarGraph(df[s:], 'seasonal_d_o_1_20')
-
-
-
-# Deseasoned data
-
-# STL Decomposition
-Pollution = pd.Series(df['seasonal_d_o_1_20'][s:].values, index = df[s:].index.values, name = 'seasonal_d_o_1_20')
-
-STL_tf = STL(Pollution)
-res = STL_tf.fit()
-
-T = res.trend
-S = res.seasonal
-R = res.resid
-
-plt.figure(figsize=(16, 8))
-# This
-fig = res.plot()
-plt.show()
-# Or
-# plt.plot(df.index, T.values,label='trend')
-# plt.plot(df.index, S.values,label='Seasonal')
-# plt.plot(df.index, R.values,label='residuals')
-# plt.xlabel('Year')
-# plt.ylabel('Pollution')
-# plt.title('STL Decomposition')
-# plt.legend(loc='upper right')
-# plt.tight_layout()
-# plt.show()
-
-str_trend = max(0, 1-(np.var(R)/np.var(T+R)))
-print(f'The strength of trend for seasonal_d_o_1_20 is {round(str_trend, 3)}.')
-
-str_seasonality = max(0, 1-(np.var(R)/np.var(S+R)))
-print(f'The strength of seasonality for seasonal_d_o_1_20 is {round(str_seasonality, 3)}.')
 
 
 
@@ -176,16 +123,6 @@ plt.figure(figsize=(16, 8))
 # This
 fig = res.plot()
 plt.show()
-# Or
-# plt.plot(df.index, T.values,label='trend')
-# plt.plot(df.index, S.values,label='Seasonal')
-# plt.plot(df.index, R.values,label='residuals')
-# plt.xlabel('Year')
-# plt.ylabel('Pollution')
-# plt.title('STL Decomposition')
-# plt.legend(loc='upper right')
-# plt.tight_layout()
-# plt.show()
 
 str_trend = max(0, 1-(np.var(R)/np.var(T+R)))
 print(f'The strength of trend for seasonal_d_o_1 is {round(str_trend, 3)}.')
@@ -201,24 +138,10 @@ print(f'The strength of seasonality for seasonal_d_o_1 is {round(str_seasonality
 #
 # # DASH app. Different Tabs. Enter order. display ACF/PACF, ADF., etc.
 #
-#
-# Correlation Matrix
-corr = df.corr()
-plt.figure(figsize=(16, 8))
-sns.heatmap(corr, annot=True, cmap='BrBG')
-plt.title('Correlation Heatmap', fontsize=18)
-plt.show()
-
-# split train-test 80-20
-X_train, X_test, y_train, y_test = train_test_split(df.iloc[:, :-1], df['pollution'], shuffle=False, test_size=0.2)
-
-print(f'Training set size: {len(X_train)} rows and {len(X_train.columns)+1} columns')
-print(f'Testing set size: {len(X_test)} rows and {len(X_test.columns)+1} columns')
 
 
-
-#
-# # Transforming data to make it stationary
+# Doing a non-seasonal differencing after the seasonal differrencing
+# Transforming data to make it stationary
 df['diff_order_1'] = toolkit.differencing(df['seasonal_d_o_1'], s)
 
 # Plotting dependent variable vs time
@@ -239,32 +162,6 @@ toolkit.ADF_Cal(df['diff_order_1'][s+1:])
 print('KPSS test on diff_order_1:-')
 toolkit.kpss_test(df['diff_order_1'][s+1:])
 
-
-#
-# # ACF Plot on transformed data
-# toolkit.Cal_autocorr_plot(df['diff_order_1'][1:], lags=50, title='ACF Plot for Pollution (diff_1)')
-#
-# # Transforming data to make it stationary
-# df['diff_order_2'] = toolkit.differencing(df['diff_order_1'], 2)
-#
-# # Stationarity Tests on transformed data
-# toolkit.CalRollingMeanVarGraph(df[2:], 'diff_order_2')
-# print('ADF test on diff_order_2:-')
-# toolkit.ADF_Cal(df['diff_order_2'][2:])
-# print('KPSS test on diff_order_2:-')
-# toolkit.kpss_test(df['diff_order_2'][2:])
-#
-# # ACF Plot on transformed data
-# toolkit.Cal_autocorr_plot(df['diff_order_2'][2:], lags=50, title='ACF Plot for Pollution (diff_2)')
-#
-
-
-
-
-
-
-
-
 # diff
 
 # STL Decomposition
@@ -281,20 +178,15 @@ plt.figure(figsize=(16, 8))
 # This
 fig = res.plot()
 plt.show()
-# Or
-# plt.plot(df.index, T.values,label='trend')
-# plt.plot(df.index, S.values,label='Seasonal')
-# plt.plot(df.index, R.values,label='residuals')
-# plt.xlabel('Year')
-# plt.ylabel('Pollution')
-# plt.title('STL Decomposition')
-# plt.legend(loc='upper right')
-# plt.tight_layout()
-# plt.show()
 
 str_trend = max(0, 1-(np.var(R)/np.var(T+R)))
 print(f'The strength of trend for diff_order_1 is {round(str_trend, 3)}.')
 
 str_seasonality = max(0, 1-(np.var(R)/np.var(S+R)))
 print(f'The strength of seasonality for diff_order_1 is {round(str_seasonality, 3)}.')
+
+
+# SARIMA model with MA on the right tail ticks.
+# Seasonal diff with season=24 (hrs) followed by first order non-seasonal differencing
+
 
