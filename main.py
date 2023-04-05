@@ -41,6 +41,19 @@ print(f'Training set size: {len(X_train)} rows and {len(X_train.columns)+1} colu
 print(f'Testing set size: {len(X_test)} rows and {len(X_test.columns)+1} columns')
 
 
+def wind_encode(s):
+    if s == "SE":
+        return 1
+    elif s == "NE":
+        return 2
+    elif s == "NW":
+        return 3
+    else:
+        return 4
+
+df["wind_dir"] = df["wnd_dir"].apply(wind_encode)
+
+
 # Plotting dependent variable vs time
 plt.figure(figsize=(16, 8))
 plt.plot(list(df.index.values), df['pollution'])
