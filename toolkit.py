@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.stattools import kpss
@@ -9,8 +10,15 @@ import statsmodels.api as sm
 import copy
 
 from scipy import signal
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 
 from statsmodels.tsa.seasonal import STL
+
+
+# np.abs(np.roots(ar))
+# This process in non-stationary as some roots lie on 1. It should be less than 1
+
+np.random.seed(6313)
 
 # The following function calculates the Rolling Mean and Rolling Variance
 def CalRollingMeanVar(dataset, column_name):
@@ -37,6 +45,7 @@ def CalRollingMeanVarGraph(dataset, column_name):
     plt.show()
 
 
+
 # create a differenced series
 def differencing(series, order=1):
     diff = []
@@ -57,7 +66,6 @@ def rev_differencing(series, first_obs, order=1):
     return rev_diff
 
 
-
 # create a differenced series
 def seasonal_differencing(series, seasons=1):
     diff = []
@@ -73,6 +81,7 @@ def rev_seasonal_differencing(series, first_obs, seasons=1):
     for i in range(len(series)):
         rev_diff.append(series[i] + rev_diff[i])
     return rev_diff
+
 
 
 # Augmented Dickey-Fuller test (for stationarity)
@@ -366,7 +375,7 @@ def Moving_Average(df_new, m, folding_order=0):
 #
 
 
-def ar2_loop_method(N, coef, mean=1, std=1):
+def ar2_loop_method(N, coef, mean=0, std=1):
     np.random.seed(6313)
     e = np.random.normal(mean, std, N)
     y = np.zeros(len(e))
@@ -380,7 +389,7 @@ def ar2_loop_method(N, coef, mean=1, std=1):
     return y, e
 
 
-def ar2_dslim_method(N, order, coef, mean=1, std=1):
+def ar2_dslim_method(N, order, coef, mean=0, std=1):
     np.random.seed(6313)
     e = np.random.normal(mean, std, N)
     num = [1] + [0] * order
@@ -397,7 +406,7 @@ def ar2_estimated_parameter_vals(y):
     return list(-np.array(LSE_Beta(X, y)))
 
 
-def ma2_loop_method(N, coef, mean=1, std=1):
+def ma2_loop_method(N, coef, mean=0, std=1):
     np.random.seed(6313)
     e = np.random.normal(mean, std, N)
     y = np.zeros(len(e))
@@ -411,7 +420,7 @@ def ma2_loop_method(N, coef, mean=1, std=1):
     return y, e
 
 
-def ma2_dslim_method(N, order, coef, mean=1, std=1):
+def ma2_dslim_method(N, order, coef, mean=0, std=1):
     np.random.seed(6313)
     e = np.random.normal(mean, std, N)
     num = [1] + coef
@@ -421,11 +430,45 @@ def ma2_dslim_method(N, order, coef, mean=1, std=1):
     return y_dlsim.reshape(-1), e
 
 
-import statsmodels.api as sm
-from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+def dslim_method(N, num, den, mean=0, std=1, seed=6313):
+    np.random.seed(seed)
+    e = np.random.normal(mean, std, N)
+    system = (num, den, 1)
+    t, y_dlsim = signal.dlsim(system, e)
+    return y_dlsim.reshape(-1), e
+
+
+def arma_input():
+    N = int(input('Number of observations:'))
+    mean_e = int(input('Enter the mean of white noise:'))
+    var_e = int(input('Enter the variance of white noise:'))
+    na = int(input('Enter AR order:'))
+    nb = int(input('Enter MA order:'))
+    den = []
+    for i in range(1, na + 1):
+        den.append(float(input(f'Enter the coefficient {i} of AR process:')))
+    num = []
+    for i in range(1, nb + 1):
+        num.append(float(input(f'Enter the coefficient {i} of MA process:')))
+    max_order = max(na, nb)
+    ar_coef = [0] * (max_order)
+    ma_coef = [0] * (max_order)
+    for i in range(na):
+        ar_coef[i] = den[i]
+    for i in range(nb):
+        ma_coef[i] = num[i]
+    ar_params = np.array(ar_coef)
+    ma_params = np.array(ma_coef)
+    ar = np.r_[1, ar_params]
+    ma = np.r_[1, ma_params]
+    print('AR coef:', ar)
+    print('MA coef:', ma)
+    return N, na, nb, ar, ma, mean_e, var_e
+
+
 def ACF_PACF_Plot(y,lags):
-    acf = sm.tsa.stattools.acf(y, nlags=lags)
-    pacf = sm.tsa.stattools.pacf(y, nlags=lags)
+    #acf = sm.tsa.stattools.acf(y, nlags=lags)
+    #pacf = sm.tsa.stattools.pacf(y, nlags=lags)
     fig = plt.figure()
     plt.subplot(211)
     plt.title('ACF/PACF of the raw data')
@@ -434,3 +477,202 @@ def ACF_PACF_Plot(y,lags):
     plot_pacf(y, ax=plt.gca(), lags=lags)
     fig.tight_layout(pad=3)
     plt.show()
+
+
+def gpac(ry, show_heatmap='Yes', j_max=7, k_max=7, round_off=3, seed=6313):
+    np.random.seed(seed)
+    gpac_table = np.zeros((j_max, k_max-1))
+    for j in range(0, j_max):
+        for k in range(1, k_max):
+            phi_num = np.zeros((k, k))
+            phi_den = np.zeros((k, k))
+            for x in range(0, k):
+                for z in range(0, k):
+                    phi_num[x][z] = ry[abs(j + 1 - z + x)]
+                    phi_den[x][z] = ry[abs(j - z + x)]
+            phi_num = np.roll(phi_num, -1, 1)
+            det_num = np.linalg.det(phi_num)
+            det_den = np.linalg.det(phi_den)
+            if det_den != 0 and not np.isnan(det_den):
+                phi_j_k = det_num / det_den
+            else:
+                phi_j_k = np.nan
+            gpac_table[j][k - 1] = phi_j_k #np.linalg.det(phi_num) / np.linalg.det(phi_den)
+    if show_heatmap=='Yes':
+        plt.figure(figsize=(16, 8))
+        x_axis_labels = list(range(1, k_max))
+        sns.heatmap(gpac_table, annot=True, xticklabels=x_axis_labels, fmt=f'.{round_off}f', vmin=-0.1, vmax=0.1)#, cmap='BrBG'
+        plt.title(f'GPAC Table', fontsize=18)
+        plt.show()
+    #print(gpac_table)
+    return gpac_table
+
+
+
+def arma_gpac_pacf(ar_order=0, ma_order=0, num=None, den=None, N=1000, mean_e=0, var_e=1, lags=15, j_max=7, k_max=7, round_off=2, seed=6313, user_ip='Yes'):
+    # if user_ip=='Yes':
+    #     N = int(input('Enter the number of data samples:'))
+    #     mean_e = int(input('Enter the mean of white noise:'))
+    #     var_e = int(input('Enter the variance of white noise:'))
+    #     ar_order = int(input('Enter AR order:'))
+    #     ma_order = int(input('Enter MA order:'))
+    #     den = []
+    #     for i in range(1, ar_order + 2):
+    #         den.append(float(input(f'Enter the coefficient {i} of AR process:')))
+    #     num = []
+    #     for i in range(1, ma_order + 2):
+    #         num.append(float(input(f'Enter the coefficient {i} of MA process:')))
+    # np.random.seed(seed)
+    # max_order = max(ar_order, ma_order)
+    # ar_coef = [0] * (max_order + 1)
+    # ma_coef = [0] * (max_order + 1)
+    # for i in range(ar_order+1):
+    #     ar_coef[i] = den[i]
+    # for i in range(ma_order+1):
+    #     ma_coef[i] = num[i]
+    # ar_params = np.array(ar_coef)
+    # ma_params = np.array(ma_coef)
+    # ar = np.r_[ar_params]
+    # ma = np.r_[ma_params]
+    # print('AR coef:', ar)
+    # print('MA coef:', ma)
+    N, na, nb, ar, ma, mean_e, var_e = arma_input()
+    arma_process = sm.tsa.ArmaProcess(ar, ma)
+    mean_y = mean_e*(1 + np.sum(ar))/(1 + np.sum(ma))
+    y = arma_process.generate_sample(N, scale=np.sqrt(var_e)) + mean_y
+    print('ARMA Process:', list(np.around(np.array(y[:15]), round_off)))
+    ry = arma_process.acf(lags=lags)
+    print('ACF:', list(np.around(np.array(ry[:15]),round_off)))
+    gpac(ry, j_max=j_max, k_max=k_max, round_off=round_off)
+    ACF_PACF_Plot(y, lags=20)
+
+
+# LM algorithm
+
+def lm_cal_e(y, na, theta, seed=6313):
+    np.random.seed(seed)
+    den = theta[:na]
+    num = theta[na:]
+    if len(den) > len(num):  # matching len of num and den
+        for x in range(len(den) - len(num)):
+            num = np.append(num, 0)
+    elif len(num) > len(den):
+        for x in range(len(num) - len(den)):
+            den = np.append(den, 0)
+    den = np.insert(den, 0, 1)
+    num = np.insert(num, 0, 1)
+    sys = (den, num, 1)
+    _, e = signal.dlsim(sys, y)
+    return e
+
+
+def lm_step1(y, na, nb, delta, theta):
+    n = na + nb
+    e = lm_cal_e(y, na, theta)
+    sse_old = np.dot(np.transpose(e), e)
+    X = np.empty(shape=(len(y), n))
+    for i in range(0, n):
+        theta[i] = theta[i] + delta
+        e_i = lm_cal_e(y, na, theta)
+        x_i = (e - e_i) / delta
+        X[:, i] = x_i[:, 0]
+        theta[i] = theta[i] - delta
+    A = np.dot(np.transpose(X), X)
+    g = np.dot(np.transpose(X), e)
+    return A, g, X, sse_old
+
+
+def lm_step2(y, na, A, theta, mu, g):
+    delta_theta = np.matmul(np.linalg.inv(A + (mu * np.identity(A.shape[0]))), g)
+    theta_new = theta + delta_theta
+    e_new = lm_cal_e(y, na, theta_new)
+    sse_new = np.dot(np.transpose(e_new), e_new)
+    if np.isnan(sse_new):
+        sse_new = 10 ** 10
+    return sse_new, delta_theta, theta_new
+
+
+def lm_step3(y, na, nb):
+    N = len(y)
+    n = na+nb
+    mu = 0.01
+    mu_max = 10 ** 20
+    max_iterations = 500
+    delta = 10 ** -6
+    var_error = 0
+    covariance_theta_hat = 0
+    sse_list = []
+    theta = np.zeros(shape=(n, 1))
+
+    for iterations in range(max_iterations):
+        A, g, X, sse_old = lm_step1(y, na, nb, delta, theta)
+        sse_new, delta_theta, theta_new = lm_step2(y, na, A, theta, mu, g)
+        sse_list.append(sse_old[0][0])
+        if iterations < max_iterations:
+            if sse_new < sse_old:
+                if np.linalg.norm(np.array(delta_theta), 2) < 10 ** -3:
+                    theta_hat = theta_new
+                    var_error = sse_new / (N - n)
+                    covariance_theta_hat = var_error * np.linalg.inv(A)
+                    print(f"Convergence Occured in {iterations} iterations")
+                    break
+                else:
+                    theta = theta_new
+                    mu = mu / 10
+            while sse_new >= sse_old:
+                mu = mu * 10
+                if mu > mu_max:
+                    print('No Convergence')
+                    break
+                sse_new, delta_theta, theta_new = lm_step2(y, na, A, theta, mu, g)
+        if iterations > max_iterations:
+            print('Max Iterations Reached')
+            break
+        theta = theta_new
+    return theta_new, sse_new, var_error[0][0], covariance_theta_hat, sse_list
+
+
+def lm_confidence_interval(theta, cov, na, nb, round_off=4):
+    print("Confidence Interval for the estimated parameter(s)")
+    lower_bound = []
+    upper_bound = []
+    for i in range(len(theta)):
+        lower_bound.append(theta[i] - 2 * np.sqrt(cov[i, i]))
+        upper_bound.append(theta[i] + 2 * np.sqrt(cov[i, i]))
+    lower_bound = np.round(lower_bound, decimals=round_off)
+    upper_bound = np.round(upper_bound, decimals=round_off)
+    for i in range(na+nb):
+        if i < na:
+            print(f"AR Coefficient {i + 1}: ({lower_bound[i][0]}, {upper_bound[i][0]})")
+        else:
+            print(f"MA Coefficient {i + 1 - na}: ({lower_bound[i][0]}, {upper_bound[i][0]})")
+
+
+def lm_find_roots(theta, na, round_off=4):
+    den = theta[:na]
+    num = theta[na:]
+    if len(den) > len(num):
+        for x in range(len(den) - len(num)):
+            num = np.append(num, 0)
+    elif len(num) > len(den):
+        for x in range(len(num) - len(den)):
+            den = np.append(den, 0)
+    else:
+        pass
+    den = np.insert(den, 0, 1)
+    num = np.insert(num, 0, 1)
+    print(np.roots(num))
+    print(np.roots(den))
+    print("Roots of numerator:", np.round(np.roots(num), decimals=round_off))
+    print("Roots of denominator:", np.round(np.roots(den), decimals=round_off))
+
+
+def plot_sse(sse_list, model_name):
+    plt.plot(sse_list)
+    plt.xlabel('Iterations')
+    plt.ylabel('SSE')
+    plt.title(f'SSE Learning Rate {model_name}')
+    plt.xticks(np.arange(0, len(sse_list), step=1))
+    plt.show()
+
+
