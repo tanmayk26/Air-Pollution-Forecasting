@@ -83,6 +83,14 @@ def rev_seasonal_differencing(series, first_obs, seasons=1):
     return rev_diff
 
 
+# # df['rev_seasonal_d_o_1'] = [np.nan] * s + toolkit.rev_differencing(df['diff_order_1'][s+1:], df['seasonal_d_o_1'][s], order=1)
+# # print(df.head(50))
+# # print('-----')
+# # print(df.tail(50))
+# # df['rev_pollution'] = toolkit.rev_seasonal_differencing(df['rev_seasonal_d_o_1'][s:], df['pollution'][:s], seasons=s)
+# # print(df.head(50))
+
+
 
 # Augmented Dickey-Fuller test (for stationarity)
 # For this test, we state the following Null hypothesis (H0) and alternative hypothesis (H1):
@@ -160,6 +168,32 @@ def average(y, n):
     for i in range(n, len(y)):
         y_pred[i] = np.mean(y[:n])
     return y_pred
+
+def base_method(method_name, y, train_n, alpha=0.5):
+    print(f'\n=== {method_name} Method ===\n')
+    if method_name == 'Average':
+        y_pred = average(y, train_n)
+    elif method_name == 'Naive':
+        y_pred = naive(y, train_n)
+    elif method_name == 'Drift':
+        y_pred = drift(y, train_n)
+    elif method_name == 'SES':
+        y_pred = SES(y, train_n, alpha)
+    e_avg, e_sq, MSE_train, VAR_train, MSE_test, VAR_test, mean_res_train = cal_errors(y, y_pred, train_n, 2)
+    df = pd.DataFrame(list(zip(y, y_pred, e_avg, e_sq)), columns=['y', 'y_pred', 'e', 'e^2'])
+    print(df)
+    if method_name == 'SES':
+        title_suffix = 'with alpha={}'.format(alpha)
+        plot_forecast(df, train_n, method_name, 'Yes', title_suffix)
+    else:
+        plot_forecast(df, train_n, method_name)
+    print('Error values using {} method'.format(method_name))
+    print('MSE Prediction data: ', round(MSE_train, 2))
+    print('MSE Forecasted data: ', round(MSE_test, 2))
+    print('Variance Prediction data: ', round(VAR_train, 2))
+    print('Variance Forecasted data: ', round(VAR_test, 2))
+    print('mean_res_train: ', round(mean_res_train, 2))
+    return df
 
 
 def naive(y, n):
@@ -675,4 +709,20 @@ def plot_sse(sse_list, model_name):
     plt.xticks(np.arange(0, len(sse_list), step=1))
     plt.show()
 
+
+def STL_decomposition(data, column_name):
+    series = pd.Series(data[column_name].values, index = data.index.values, name = column_name)
+    STL_tf = STL(series)
+    res = STL_tf.fit()
+    T = res.trend
+    S = res.seasonal
+    R = res.resid
+    plt.figure(figsize=(16, 8))
+    # This
+    fig = res.plot()
+    plt.show()
+    str_trend = max(0, 1-(np.var(R)/np.var(T+R)))
+    print(f'The strength of trend for seasonal_d_o_1 is {round(str_trend, 3)}.')
+    str_seasonality = max(0, 1-(np.var(R)/np.var(S+R)))
+    print(f'The strength of seasonality for seasonal_d_o_1 is {round(str_seasonality, 3)}.')
 

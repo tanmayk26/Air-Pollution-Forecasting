@@ -4,8 +4,24 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from statsmodels.tsa.seasonal import STL
 from sklearn.model_selection import train_test_split
+import statsmodels.api as sm
 
 import toolkit
+
+# %%
+###
+# Notes
+# roots are inside the unit circle then stable
+# close to 1 marginally stable
+# close to 9 stable
+# cutoff, tailoff: decreasing to 0
+# significant corr at lollipops in pacf
+# cutoff in acf, tailoff in pacf: ar
+# cutoff in pacf, tailoff in acf: ma
+
+
+
+###
 
 # to display all the columns
 pd.set_option('display.max_columns', None)
@@ -39,7 +55,8 @@ def wind_encode(s):
         return int(4)
 
 
-df["wind_dir"] = df["wnd_dir"].apply(wind_encode)
+df["wnd_dir"] = df["wnd_dir"].apply(wind_encode)
+print(df.info())
 
 # Correlation Matrix
 corr = df.corr()
@@ -120,26 +137,8 @@ toolkit.CalRollingMeanVarGraph(df[s:], 'seasonal_d_o_1')
 # Deseasoned data
 
 # STL Decomposition
-Pollution = pd.Series(df['seasonal_d_o_1'][s:].values, index = df[s:].index.values, name = 'seasonal_d_o_1')
 
-STL_tf = STL(Pollution)
-res = STL_tf.fit()
-
-T = res.trend
-S = res.seasonal
-R = res.resid
-
-plt.figure(figsize=(16, 8))
-# This
-fig = res.plot()
-plt.show()
-
-str_trend = max(0, 1-(np.var(R)/np.var(T+R)))
-print(f'The strength of trend for seasonal_d_o_1 is {round(str_trend, 3)}.')
-
-str_seasonality = max(0, 1-(np.var(R)/np.var(S+R)))
-print(f'The strength of seasonality for seasonal_d_o_1 is {round(str_seasonality, 3)}.')
-
+toolkit.STL_decomposition(df[s:], 'seasonal_d_o_1')
 
 #
 # # Strongly seasonal. Partially stationarity. looking at local peaks (~) and overall decreasing residuals in ACF, stationarity in ADF
@@ -175,83 +174,104 @@ toolkit.kpss_test(df['diff_order_1'][s+1:])
 # diff
 
 # STL Decomposition
-Pollution = pd.Series(df['diff_order_1'][s+1:].values, index = df[s+1:].index.values, name = 'diff_order_1')
-
-STL_tf = STL(Pollution)
-res = STL_tf.fit()
-
-T = res.trend
-S = res.seasonal
-R = res.resid
-
-plt.figure(figsize=(16, 8))
-# This
-fig = res.plot()
-plt.show()
-
-str_trend = max(0, 1-(np.var(R)/np.var(T+R)))
-print(f'The strength of trend for diff_order_1 is {round(str_trend, 3)}.')
-
-str_seasonality = max(0, 1-(np.var(R)/np.var(S+R)))
-print(f'The strength of seasonality for diff_order_1 is {round(str_seasonality, 3)}.')
-
+toolkit.STL_decomposition(df[s+1:], 'diff_order_1')
 
 # SARIMA model with MA on the right tail ticks.
 # Seasonal diff with season=24 (hrs) followed by first order non-seasonal differencing
+# %%
+X = df.drop(['diff_order_1'], axis=1)
+y = df['diff_order_1']
 
-print(df.info())
-X_train, X_test, y_train, y_test = train_test_split(df.iloc[:, :-1], df['diff_order_1'], shuffle=False, test_size=0.2)
+X = X[s+1:]
+y = y[s+1:]
+X = sm.add_constant(X)
+X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=False, test_size=0.2)
 
 print(f'Training set size: {len(X_train)} rows and {len(X_train.columns)+1} columns')
 print(f'Testing set size: {len(X_test)} rows and {len(X_test.columns)+1} columns')
 
+# %%
 
+# # from statsmodels.tsa.holtwinters import ExponentialSmoothing
+# #
+# # model_holt_winters = ExponentialSmoothing(df['diff_order_1'], seasonal_periods=s).fit(optimized=True)
+# # #forecasts_holt_winters = model_holt_winters.forecast(len(test))
+# #
+#
 # from statsmodels.tsa.holtwinters import ExponentialSmoothing
+# model = ExponentialSmoothing(df['diff_order_1'][s+1:]).fit()
 #
-# model_holt_winters = ExponentialSmoothing(df['diff_order_1'], seasonal_periods=s).fit(optimized=True)
-# #forecasts_holt_winters = model_holt_winters.forecast(len(test))
-#
+# # make predictions
+# pred = model.predict(start='2023-05-01', end='2023-12-31')
 
-from statsmodels.tsa.holtwinters import ExponentialSmoothing
-model = ExponentialSmoothing(df['diff_order_1'][s+1:]).fit()
-
-# make predictions
-pred = model.predict(start='2023-05-01', end='2023-12-31')
-
-# df['rev_seasonal_d_o_1'] = [np.nan] * s + toolkit.rev_differencing(df['diff_order_1'][s+1:], df['seasonal_d_o_1'][s], order=1)
-# print(df.head(50))
-# print('-----')
-# print(df.tail(50))
-# df['rev_pollution'] = toolkit.rev_seasonal_differencing(df['rev_seasonal_d_o_1'][s:], df['pollution'][:s], seasons=s)
-# print(df.head(50))
+# # df['rev_seasonal_d_o_1'] = [np.nan] * s + toolkit.rev_differencing(df['diff_order_1'][s+1:], df['seasonal_d_o_1'][s], order=1)
+# # print(df.head(50))
+# # print('-----')
+# # print(df.tail(50))
+# # df['rev_pollution'] = toolkit.rev_seasonal_differencing(df['rev_seasonal_d_o_1'][s:], df['pollution'][:s], seasons=s)
+# # print(df.head(50))
 #
 
+#
+# # plot results
+# plt.figure(figsize=(12,6))
+# plt.plot(df.index, df['pollution'], label='Actual')
+# plt.plot(pred.index, pred.values, label='Forecast')
+# plt.legend()
+# plt.title('Holt-Winters Forecast')
+# plt.xlabel('Date')
+# plt.ylabel('Value')
+# plt.show()
 
-# plot results
-plt.figure(figsize=(12,6))
-plt.plot(df.index, df['pollution'], label='Actual')
-plt.plot(pred.index, pred.values, label='Forecast')
-plt.legend()
-plt.title('Holt-Winters Forecast')
-plt.xlabel('Date')
-plt.ylabel('Value')
-plt.show()
-
-
-
-
-##########
+# %%
 
 
+avg = toolkit.base_method('Average', y, len(y_train))
+naive = toolkit.base_method('Naive', y, len(y_train))
+drift = toolkit.base_method('Drift', y, len(y_train))
+ses_point5 = toolkit.base_method('SES', y, len(y_train), 0.5)
 
 
 
-# Notes
-# roots are inside the unit circle then stable
-# close to 1 marginally stable
-# close to 9 stable
-# cutoff, tailoff: decreasing to 0
-# significant corr at lollipops in pacf
-# cutoff in acf, tailoff in pacf: ar
-# cutoff in pacf, tailoff in acf: ma
+# %%
+lags=50
+round_off = 3
+ry = sm.tsa.stattools.acf(df['diff_order_1'][s+1:], nlags=lags)
+toolkit.gpac(ry, j_max=10, k_max=10, round_off=round_off)
 
+
+#
+# # %%
+# ############### Feature selection
+# X_train = X_train.drop(['pollution', 'seasonal_d_o_1'], axis=1)
+# model_ols = sm.OLS(y_train, X_train).fit()
+# print(model_ols.summary())
+#
+# ##########
+#
+# # %%
+#
+# X_train = X_train.drop(['temp'], axis=1)
+# model_ols = sm.OLS(y_train, X_train).fit()
+# print(model_ols.summary())
+#
+# # %%
+# X_train = X_train.drop(['wnd_spd'], axis=1)
+# model_ols = sm.OLS(y_train, X_train).fit()
+# print(model_ols.summary())
+#
+# # %%
+# X_train = X_train.drop(['snow'], axis=1)
+# model_ols = sm.OLS(y_train, X_train).fit()
+# print(model_ols.summary())
+#
+# # %%
+# from statsmodels.stats.outliers_influence import variance_inflation_factor
+#
+# #calculate VIF for each explanatory variable
+# vif = pd.DataFrame()
+# vif['VIF'] = [variance_inflation_factor(X_train.values, i) for i in range(X_train.shape[1])]
+# vif['variable'] = X_train.columns
+#
+# #view VIF for each explanatory variable
+# print(vif)
