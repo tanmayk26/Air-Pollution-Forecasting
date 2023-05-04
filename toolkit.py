@@ -47,14 +47,32 @@ def differencing(series, order=1):
     return diff
 
 
+def rev_differencing(series, first_obs, order=1):
+    rev_diff = []
+    for i in range(order-1):
+        rev_diff.append(np.nan)
+    rev_diff.append(first_obs)
+    for i in range(order, len(series)+1):
+        rev_diff.append(series[i-1] + rev_diff[i - 1])
+    return rev_diff
+
+
+
 # create a differenced series
-def seasonal_differencing(series, seasons=1, order=1):
+def seasonal_differencing(series, seasons=1):
     diff = []
     for i in range(seasons):
         diff.append(np.nan)
     for i in range(seasons, len(series)):
         diff.append(series[i] - series[i - seasons])
     return diff
+
+
+def rev_seasonal_differencing(series, first_obs, seasons=1):
+    rev_diff = list(first_obs)
+    for i in range(len(series)):
+        rev_diff.append(series[i] + rev_diff[i])
+    return rev_diff
 
 
 # Augmented Dickey-Fuller test (for stationarity)

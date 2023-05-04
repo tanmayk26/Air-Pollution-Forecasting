@@ -27,6 +27,20 @@ print(f'Data basic statistics: \n{df.describe()}')
 print(f'NA value: \n{df.isna().sum()}')
 # As we can see there are no null values
 
+
+def wind_encode(s):
+    if s == "SE":
+        return int(1)
+    elif s == "NE":
+        return int(2)
+    elif s == "NW":
+        return int(3)
+    else:
+        return int(4)
+
+
+df["wind_dir"] = df["wnd_dir"].apply(wind_encode)
+
 # Correlation Matrix
 corr = df.corr()
 plt.figure(figsize=(16, 8))
@@ -35,24 +49,10 @@ plt.title('Correlation Heatmap', fontsize=18)
 plt.show()
 
 # split train-test 80-20
-X_train, X_test, y_train, y_test = train_test_split(df.iloc[:, :-1], df['pollution'], shuffle=False, test_size=0.2)
+X_train, X_test, y_train, y_test = train_test_split(df.iloc[:, 1:], df['pollution'], shuffle=False, test_size=0.2)
 
 print(f'Training set size: {len(X_train)} rows and {len(X_train.columns)+1} columns')
 print(f'Testing set size: {len(X_test)} rows and {len(X_test.columns)+1} columns')
-
-
-def wind_encode(s):
-    if s == "SE":
-        return 1
-    elif s == "NE":
-        return 2
-    elif s == "NW":
-        return 3
-    else:
-        return 4
-
-df["wind_dir"] = df["wnd_dir"].apply(wind_encode)
-
 
 # Plotting dependent variable vs time
 plt.figure(figsize=(16, 8))
@@ -75,7 +75,6 @@ toolkit.ADF_Cal(df['pollution'])
 toolkit.kpss_test(df['pollution'])
 toolkit.CalRollingMeanVarGraph(df, 'pollution')
 
-
 # STL Decomposition
 Pollution = pd.Series(df['pollution'].values, index = date, name = 'pollution')
 
@@ -96,8 +95,6 @@ print(f'The strength of trend for this data set is {round(str_trend, 3)}.')
 
 str_seasonality = max(0, 1-(np.var(R)/np.var(S+R)))
 print(f'The strength of seasonality for this data set is {round(str_seasonality, 3)}.')
-
-
 
 # Seasonal Differencing
 s = 24
@@ -202,4 +199,59 @@ print(f'The strength of seasonality for diff_order_1 is {round(str_seasonality, 
 # SARIMA model with MA on the right tail ticks.
 # Seasonal diff with season=24 (hrs) followed by first order non-seasonal differencing
 
+print(df.info())
+X_train, X_test, y_train, y_test = train_test_split(df.iloc[:, :-1], df['diff_order_1'], shuffle=False, test_size=0.2)
+
+print(f'Training set size: {len(X_train)} rows and {len(X_train.columns)+1} columns')
+print(f'Testing set size: {len(X_test)} rows and {len(X_test.columns)+1} columns')
+
+
+# from statsmodels.tsa.holtwinters import ExponentialSmoothing
+#
+# model_holt_winters = ExponentialSmoothing(df['diff_order_1'], seasonal_periods=s).fit(optimized=True)
+# #forecasts_holt_winters = model_holt_winters.forecast(len(test))
+#
+
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+model = ExponentialSmoothing(df['diff_order_1'][s+1:]).fit()
+
+# make predictions
+pred = model.predict(start='2023-05-01', end='2023-12-31')
+
+# df['rev_seasonal_d_o_1'] = [np.nan] * s + toolkit.rev_differencing(df['diff_order_1'][s+1:], df['seasonal_d_o_1'][s], order=1)
+# print(df.head(50))
+# print('-----')
+# print(df.tail(50))
+# df['rev_pollution'] = toolkit.rev_seasonal_differencing(df['rev_seasonal_d_o_1'][s:], df['pollution'][:s], seasons=s)
+# print(df.head(50))
+#
+
+
+# plot results
+plt.figure(figsize=(12,6))
+plt.plot(df.index, df['pollution'], label='Actual')
+plt.plot(pred.index, pred.values, label='Forecast')
+plt.legend()
+plt.title('Holt-Winters Forecast')
+plt.xlabel('Date')
+plt.ylabel('Value')
+plt.show()
+
+
+
+
+##########
+
+
+
+
+
+# Notes
+# roots are inside the unit circle then stable
+# close to 1 marginally stable
+# close to 9 stable
+# cutoff, tailoff: decreasing to 0
+# significant corr at lollipops in pacf
+# cutoff in acf, tailoff in pacf: ar
+# cutoff in pacf, tailoff in acf: ma
 
