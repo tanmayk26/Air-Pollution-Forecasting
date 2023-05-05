@@ -65,7 +65,9 @@ toolkit.plot_graph(x_value=df.index.values, y_value=df['pollution'], xlabel='Tim
 toolkit.ACF_PACF_Plot(df['pollution'], lags=60)
 
 # Stationarity Tests on raw data
+print('ADF test on pollution:-')
 toolkit.ADF_Cal(df['pollution'])
+print('KPSS test on pollution:-')
 toolkit.kpss_test(df['pollution'])
 toolkit.CalRollingMeanVarGraph(df, 'pollution')
 
@@ -75,18 +77,19 @@ toolkit.STL_decomposition(df, 'pollution')
 # Seasonal Differencing
 s = 24
 df['seasonal_d_o_1'] = toolkit.seasonal_differencing(df['pollution'], seasons=s)
-#print(df[['pollution', 'seasonal_d_o_1']].head(60))
 
 # Plotting dependent variable vs time
 toolkit.plot_graph(x_value=df.index.values, y_value=df['seasonal_d_o_1'], xlabel='Time', ylabel='seasonal_d_o_1', title='Pollution over Time')
 
-# Stationarity on seasonaly differenced data
+# ACF/PACF plot seasonaly differenced data
 toolkit.ACF_PACF_Plot(df['seasonal_d_o_1'][s:], lags=60)
+
+# Stationarity on seasonaly differenced data
+print('ADF test on seasonal_d_o_1:-')
 toolkit.ADF_Cal(df['seasonal_d_o_1'][s:])
+print('KPSS test on seasonal_d_o_1:-')
 toolkit.kpss_test(df['seasonal_d_o_1'][s:])
 toolkit.CalRollingMeanVarGraph(df[s:], 'seasonal_d_o_1')
-
-# Deseasoned data
 
 # STL Decomposition
 
@@ -99,8 +102,10 @@ df['diff_order_1'] = toolkit.differencing(df['seasonal_d_o_1'], s)
 # Plotting dependent variable vs time
 toolkit.plot_graph(x_value=df.index.values, y_value=df['diff_order_1'], xlabel='Time', ylabel='diff_order_1', title='Pollution over Time')
 
-# Stationarity Tests on transformed data
+# ACF/PACF plot transformed data
 toolkit.ACF_PACF_Plot(df['diff_order_1'][s+1:], lags=60)
+
+# Stationarity Tests on transformed data
 toolkit.CalRollingMeanVarGraph(df[s+1:], 'diff_order_1')
 print('ADF test on diff_order_1:-')
 toolkit.ADF_Cal(df['diff_order_1'][s+1:])
@@ -109,6 +114,10 @@ toolkit.kpss_test(df['diff_order_1'][s+1:])
 
 # STL Decomposition
 toolkit.STL_decomposition(df[s+1:], 'diff_order_1')
+
+
+
+
 
 # %%
 X = df.drop(['diff_order_1'], axis=1)
