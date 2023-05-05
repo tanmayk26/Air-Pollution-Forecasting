@@ -160,15 +160,6 @@ def Cal_autocorr_plot(y, lags, title='ACF Plot', plot_show='Yes'):
         plt.show()
 
 
-
-def average(y, n):
-    y_pred = list(np.nan for i in range(0, len(y)))
-    for i in range(1, n):
-        y_pred[i] = np.mean(y[:i])
-    for i in range(n, len(y)):
-        y_pred[i] = np.mean(y[:n])
-    return y_pred
-
 def base_method(method_name, y, train_n, alpha=0.5):
     print(f'\n=== {method_name} Method ===\n')
     if method_name == 'Average':
@@ -194,6 +185,15 @@ def base_method(method_name, y, train_n, alpha=0.5):
     print('Variance Forecasted data: ', round(VAR_test, 2))
     print('mean_res_train: ', round(mean_res_train, 2))
     return df
+
+
+def average(y, n):
+    y_pred = list(np.nan for i in range(0, len(y)))
+    for i in range(1, n):
+        y_pred[i] = np.mean(y[:i])
+    for i in range(n, len(y)):
+        y_pred[i] = np.mean(y[:n])
+    return y_pred
 
 
 def naive(y, n):
@@ -725,4 +725,16 @@ def STL_decomposition(data, column_name):
     print(f'The strength of trend for seasonal_d_o_1 is {round(str_trend, 3)}.')
     str_seasonality = max(0, 1-(np.var(R)/np.var(S+R)))
     print(f'The strength of seasonality for seasonal_d_o_1 is {round(str_seasonality, 3)}.')
+
+
+def plot_graph(x_value, y_value, xlabel='Time', ylabel='Magnitude', title='Samples over Time'):
+    # Plotting dependent variable vs time
+    plt.figure(figsize=(16, 8))
+    plt.plot(list(x_value), y_value)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
 
