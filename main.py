@@ -60,20 +60,20 @@ plt.show()
 # print(f'Testing set size: {len(X_test)} rows and {len(X_test.columns)+1} columns')
 
 # Plotting dependent variable vs time
-toolkit.plot_graph(x_value=df.index.values, y_value=df['pollution'], xlabel='Time', ylabel='Pollution', title='Pollution over Time')
+# toolkit.plot_graph(x_value=df.index.values, y_value=df['pollution'], xlabel='Time', ylabel='Pollution', title='Pollution over Time')
 
 # ACF/PACF plot raw data
-toolkit.ACF_PACF_Plot(df['pollution'], lags=60)
+# toolkit.ACF_PACF_Plot(df['pollution'], lags=60)
 
 # Stationarity Tests on raw data
-print('ADF test on pollution:-')
-toolkit.ADF_Cal(df['pollution'])
-print('KPSS test on pollution:-')
-toolkit.kpss_test(df['pollution'])
-toolkit.CalRollingMeanVarGraph(df, 'pollution')
+# print('ADF test on pollution:-')
+# toolkit.ADF_Cal(df['pollution'])
+# print('KPSS test on pollution:-')
+# toolkit.kpss_test(df['pollution'])
+# toolkit.CalRollingMeanVarGraph(df, 'pollution')
 
 # STL Decomposition
-toolkit.STL_decomposition(df, 'pollution')
+# toolkit.STL_decomposition(df, 'pollution')
 
 # Seasonal Differencing
 s = 24
@@ -82,21 +82,21 @@ print(f'Performing Seasonal Differencing with interval={s}')
 df['seasonal_d_o_1'] = toolkit.seasonal_differencing(df['pollution'], seasons=s)
 
 # Plotting dependent variable vs time
-toolkit.plot_graph(x_value=df.index.values, y_value=df['seasonal_d_o_1'], xlabel='Time', ylabel='seasonal_d_o_1', title='Pollution over Time')
+# toolkit.plot_graph(x_value=df.index.values, y_value=df['seasonal_d_o_1'], xlabel='Time', ylabel='seasonal_d_o_1', title='Pollution over Time')
 
 # ACF/PACF plot seasonaly differenced data
-toolkit.ACF_PACF_Plot(df['seasonal_d_o_1'][s:], lags=60)
+# toolkit.ACF_PACF_Plot(df['seasonal_d_o_1'][s:], lags=60)
 
 # Stationarity on seasonaly differenced data
-print('ADF test on seasonal_d_o_1:-')
-toolkit.ADF_Cal(df['seasonal_d_o_1'][s:])
-print('KPSS test on seasonal_d_o_1:-')
-toolkit.kpss_test(df['seasonal_d_o_1'][s:])
-toolkit.CalRollingMeanVarGraph(df[s:], 'seasonal_d_o_1')
+# print('ADF test on seasonal_d_o_1:-')
+# toolkit.ADF_Cal(df['seasonal_d_o_1'][s:])
+# print('KPSS test on seasonal_d_o_1:-')
+# toolkit.kpss_test(df['seasonal_d_o_1'][s:])
+# toolkit.CalRollingMeanVarGraph(df[s:], 'seasonal_d_o_1')
 
 # STL Decomposition
 
-toolkit.STL_decomposition(df[s:], 'seasonal_d_o_1')
+# toolkit.STL_decomposition(df[s:], 'seasonal_d_o_1')
 
 # Doing a non-seasonal differencing after the seasonal differrencing
 # Transforming data to make it stationary
@@ -104,43 +104,42 @@ print('Performing Non-Seasonal Differencing with interval=1')
 df['diff_order_1'] = toolkit.differencing(df['seasonal_d_o_1'], s)
 
 # Plotting dependent variable vs time
-toolkit.plot_graph(x_value=df.index.values, y_value=df['diff_order_1'], xlabel='Time', ylabel='diff_order_1', title='Pollution over Time')
+# toolkit.plot_graph(x_value=df.index.values, y_value=df['diff_order_1'], xlabel='Time', ylabel='diff_order_1', title='Pollution over Time')
 
 # ACF/PACF plot transformed data
 toolkit.ACF_PACF_Plot(df['diff_order_1'][s+1:], lags=60)
 
 # Stationarity Tests on transformed data
-toolkit.CalRollingMeanVarGraph(df[s+1:], 'diff_order_1')
-print('ADF test on diff_order_1:-')
-toolkit.ADF_Cal(df['diff_order_1'][s+1:])
-print('KPSS test on diff_order_1:-')
-toolkit.kpss_test(df['diff_order_1'][s+1:])
+# toolkit.CalRollingMeanVarGraph(df[s+1:], 'diff_order_1')
+# print('ADF test on diff_order_1:-')
+# toolkit.ADF_Cal(df['diff_order_1'][s+1:])
+# print('KPSS test on diff_order_1:-')
+# toolkit.kpss_test(df['diff_order_1'][s+1:])
 
 # STL Decomposition
-toolkit.STL_decomposition(df[s+1:], 'diff_order_1')
+# toolkit.STL_decomposition(df[s+1:], 'diff_order_1')
 
 
 # %%
 
 # Train-Test Split
+df.index.freq = 'H'
 df_train, df_test = train_test_split(df, shuffle=False, test_size=0.20)
 print(f'Training set size: {len(df_train)} rows and {len(df_train.columns)+1} columns')
 print(f'Testing set size: {len(df_test)} rows and {len(df_test.columns)+1} columns')
 
-
 # Base Models
 
+holt_winters = toolkit.base_method('Holt-Winters', df['pollution'], len(df_train))
 df_err = toolkit.base_method('Average', df['diff_order_1'][s+1:], len(df_train))
 naive = toolkit.base_method('Naive', df['diff_order_1'][s+1:], len(df_train))
 drift = toolkit.base_method('Drift', df['diff_order_1'][s+1:], len(df_train))
 ses_point5 = toolkit.base_method('SES', df['diff_order_1'][s+1:], len(df_train), 0.5)
-#holt_winters = toolkit.base_method('Holt-Winters', df['pollution'].replace(0, method='ffill'), len(df_train))
-#holt_winters = toolkit.base_method('Holt-Winters', df['diff_order_1'][s+1:], len(df_train))
 
 df_err = pd.concat([df_err, naive], ignore_index=True)
 df_err = pd.concat([df_err, drift], ignore_index=True)
 df_err = pd.concat([df_err, ses_point5], ignore_index=True)
-#df_err = pd.concat([df_err, holt_winters], ignore_index=True)
+df_err = pd.concat([df_err, holt_winters], ignore_index=True)
 
 print('===Model Comparison===\n', df_err)
 
@@ -188,7 +187,6 @@ vif['variable'] = X_train.columns
 print(vif)
 
 
-
 # %%
 ############### Feature selection
 X_train_t = sm.add_constant(X_train, prepend=True)
@@ -229,7 +227,7 @@ e, e_sq, MSE_train, VAR_train, MSE_test, VAR_test, mean_res_train = toolkit.cal_
 lags=50
 
 
-method_name = 'Multi linear Regression'
+method_name = 'Multi-linear Regression'
 q_value = toolkit.Cal_q_value(e[:len(y_train)], lags, len(y_train), 2)
 print('Error values using {} method'.format(method_name))
 print('MSE Prediction data: ', round(MSE_train, 2))
@@ -260,4 +258,70 @@ print(df_err)
 lags = 50
 round_off = 3
 ry = sm.tsa.stattools.acf(y_train, nlags=lags)
-toolkit.gpac(ry, j_max=10, k_max=10, round_off=round_off)
+toolkit.gpac(ry, j_max=12, k_max=12, round_off=round_off)
+
+
+# %%
+model = sm.tsa.ARIMA(df['pollution'][:len(df_train)], order=(0,0,0), seasonal_order=(0,1,0,24))
+model_fit = model.fit()
+print(model_fit.summary())
+y_result_hat = model_fit.predict()
+y_result_h_t = model_fit.forecast(steps=len(df_test))
+res_e = df['pollution'][:len(df_train)] - y_result_hat
+fore_error = df['pollution'][len(df_train):] - y_result_h_t
+
+print(f'variance of forecast errors is = {np.var(fore_error):.2f}')
+print(f'variance of residual errors is = {np.var(res_e):.2f}')
+print(f'Variance of forecast errors vs variance of Residual errors: {np.var(fore_error)/np.var(res_e):.2f}')
+
+
+# %%
+model = sm.tsa.ARIMA(df['pollution'][:len(df_train)], order=(0,1,0), seasonal_order=(0,0,1,24))
+model_fit = model.fit()
+print(model_fit.summary())
+y_result_hat = model_fit.predict()
+y_result_h_t = model_fit.forecast(steps=len(df_test))
+res_e = df['pollution'][:len(df_train)] - y_result_hat
+fore_error = df['pollution'][len(df_train):] - y_result_h_t
+
+print(f'variance of forecast errors is = {np.var(fore_error):.2f}')
+print(f'variance of residual errors is = {np.var(res_e):.2f}')
+print(f'Variance of forecast errors vs variance of Residual errors: {np.var(fore_error)/np.var(res_e):.2f}')
+
+
+# %%
+na = 0
+nb = 1
+model_name = f'ARMA({na}, {nb})'
+
+theta, sse, var_error, covariance_theta_hat, sse_list = toolkit.lm_step3(df['pollution'], na, nb)
+
+theta2 = np.array(theta).reshape(-1)
+for i in range(na + nb):
+    if i < na:
+        print('The AR coefficient {} is: {:.3f}'.format(i + 1, np.round(theta2[i], 3)))
+    else:
+        print('The MA coefficient {} is: {:.3f}'.format(i + 1 - na, np.round(theta2[i], 3)))
+
+toolkit.lm_confidence_interval(theta, covariance_theta_hat, na, nb, round_off=round_off)
+
+print("Estimated Covariance Matrix of estimated parameters:\n", np.round(covariance_theta_hat, decimals=round_off))
+
+print("Estimated variance of error:", round(var_error, round_off))
+
+print(toolkit.lm_find_roots(theta, na, round_off=round_off))
+
+toolkit.plot_sse(sse_list, '')
+
+
+plt.plot(df['pollution'][len(df_train):].index.values, df['pollution'][len(df_train):], label='Test')
+plt.plot(df['pollution'][len(df_train):].index.values, y_result_h_t, label='h-Step Predictions')
+plt.legend()
+plt.title('Test vs H-Step Predictions graph')
+plt.xlabel('Time')
+plt.ylabel('Value')
+plt.show()
+
+
+
+

@@ -5,7 +5,7 @@ import seaborn as sns
 
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.stattools import kpss
-
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
 import statsmodels.api as sm
 import copy
 
@@ -173,26 +173,31 @@ def base_method(method_name, y, train_n, alpha=0.5):
     elif method_name == 'SES':
         y_pred = SES(y, train_n, alpha)
     elif method_name == 'Holt-Winters':
-        from statsmodels.tsa.holtwinters import ExponentialSmoothing
-        model = ExponentialSmoothing(y).fit()
-        #model = ExponentialSmoothing(y, seasonal_periods=24).fit()
-        #model = ExponentialSmoothing(y, seasonal_periods=24).fit()
-        #model = ExponentialSmoothing(y, seasonal_periods=24).fit()
-        #model = ExponentialSmoothing(y, seasonal_periods=24).fit()
-
-        pred_train_holts = model.predict(start=0, end=(train_n - 1))
-        pred_test_holts = model.forecast(steps=len(y)-train_n)
-        y_pred = pred_train_holts + pred_test_holts
-    e_avg, e_sq, MSE_train, VAR_train, MSE_test, VAR_test, mean_res_train = cal_errors(y, y_pred, train_n, 2)
-    df = pd.DataFrame(list(zip(y, y_pred, e_avg, e_sq)), columns=['y', 'y_pred', 'e', 'e^2'])
+        model = ExponentialSmoothing(y[:train_n], seasonal='add', seasonal_periods=24).fit()
+        y_pred = model.predict(start=0, end=(train_n - 1))
+        y_pred = pd.concat([y_pred, model.forecast(steps=len(y)-train_n-1)])
+        print(y_pred)
+    if method_name == 'Holt-Winters':
+        e = y - y_pred
+        e_sq = e ** 2
+        MSE_train = np.nanmean(e_sq[:train_n])
+        VAR_train = np.nanvar(e[:train_n])
+        MSE_test = np.nanmean(e_sq[train_n:])
+        VAR_test = np.nanvar(e[train_n:])
+        mean_res_train = np.nanmean(e[:train_n])
+    else:
+        e, e_sq, MSE_train, VAR_train, MSE_test, VAR_test, mean_res_train = cal_errors(y, y_pred, train_n, 2)
+    df = pd.DataFrame(list(zip(y, y_pred, e, e_sq)), columns=['y', 'y_pred', 'e', 'e^2'])
     print(df)
     if method_name == 'SES':
         title_suffix = 'with alpha={}'.format(alpha)
         plot_forecast(df, train_n, method_name, 'Yes', title_suffix)
+    elif method_name == 'Holt-Winters':
+        holt_winter_plot(y[:train_n], y[train_n:], y_pred[train_n:])
     else:
         plot_forecast(df, train_n, method_name)
     lags = 50
-    q_value = Cal_q_value(e_avg[:train_n], lags, train_n, 2)
+    q_value = Cal_q_value(e[:train_n], lags, train_n, 2)
     print('Error values using {} method'.format(method_name))
     print('MSE Prediction data: ', round(MSE_train, 2))
     print('MSE Forecasted data: ', round(MSE_test, 2))
@@ -204,6 +209,15 @@ def base_method(method_name, y, train_n, alpha=0.5):
     print(l_err)
     df_err = pd.DataFrame(l_err, columns=['method_name', 'MSE_train', 'MSE_test', 'VAR_train', 'VAR_test', 'mean_res_train', 'Q-value'])
     return df_err
+
+
+def holt_winter_plot(train, test, test_predictions):
+    train.plot(legend = True, label = 'Training dataset')
+    test.plot(legend = True, label = 'Testing dataset', color='orange')
+    test_predictions.plot(legend = True, label = 'Forecast',  color='green')
+    plt.title('Train, Test and Predicted Test using Holt Winters')
+    plt.tight_layout()
+    plt.show()
 
 
 def average(y, n):
