@@ -52,11 +52,12 @@ sns.heatmap(corr, annot=True, cmap='BrBG')
 plt.title('Correlation Heatmap', fontsize=18)
 plt.show()
 
-# split train-test 80-20
-X_train, X_test, y_train, y_test = train_test_split(df.iloc[:, 1:], df['pollution'], shuffle=False, test_size=0.2)
 
-print(f'Training set size: {len(X_train)} rows and {len(X_train.columns)+1} columns')
-print(f'Testing set size: {len(X_test)} rows and {len(X_test.columns)+1} columns')
+# split train-test 80-20
+# X_train, X_test, y_train, y_test = train_test_split(df.iloc[:, 1:], df['pollution'], shuffle=False, test_size=0.2)
+#
+# print(f'Training set size: {len(X_train)} rows and {len(X_train.columns)+1} columns')
+# print(f'Testing set size: {len(X_test)} rows and {len(X_test.columns)+1} columns')
 
 # Plotting dependent variable vs time
 toolkit.plot_graph(x_value=df.index.values, y_value=df['pollution'], xlabel='Time', ylabel='Pollution', title='Pollution over Time')
@@ -76,6 +77,8 @@ toolkit.STL_decomposition(df, 'pollution')
 
 # Seasonal Differencing
 s = 24
+print(f'Performing Seasonal Differencing with interval={s}')
+
 df['seasonal_d_o_1'] = toolkit.seasonal_differencing(df['pollution'], seasons=s)
 
 # Plotting dependent variable vs time
@@ -97,6 +100,7 @@ toolkit.STL_decomposition(df[s:], 'seasonal_d_o_1')
 
 # Doing a non-seasonal differencing after the seasonal differrencing
 # Transforming data to make it stationary
+print('Performing Non-Seasonal Differencing with interval=1')
 df['diff_order_1'] = toolkit.differencing(df['seasonal_d_o_1'], s)
 
 # Plotting dependent variable vs time
@@ -116,104 +120,144 @@ toolkit.kpss_test(df['diff_order_1'][s+1:])
 toolkit.STL_decomposition(df[s+1:], 'diff_order_1')
 
 
+# %%
 
+# Train-Test Split
+df_train, df_test = train_test_split(df, shuffle=False, test_size=0.20)
+print(f'Training set size: {len(df_train)} rows and {len(df_train.columns)+1} columns')
+print(f'Testing set size: {len(df_test)} rows and {len(df_test.columns)+1} columns')
+
+
+# Base Models
+
+df_err = toolkit.base_method('Average', df['diff_order_1'][s+1:], len(df_train))
+naive = toolkit.base_method('Naive', df['diff_order_1'][s+1:], len(df_train))
+drift = toolkit.base_method('Drift', df['diff_order_1'][s+1:], len(df_train))
+ses_point5 = toolkit.base_method('SES', df['diff_order_1'][s+1:], len(df_train), 0.5)
+#holt_winters = toolkit.base_method('Holt-Winters', df['pollution'].replace(0, method='ffill'), len(df_train))
+#holt_winters = toolkit.base_method('Holt-Winters', df['diff_order_1'][s+1:], len(df_train))
+
+df_err = pd.concat([df_err, naive], ignore_index=True)
+df_err = pd.concat([df_err, drift], ignore_index=True)
+df_err = pd.concat([df_err, ses_point5], ignore_index=True)
+#df_err = pd.concat([df_err, holt_winters], ignore_index=True)
+
+print('===Model Comparison===\n', df_err)
 
 
 # %%
-X = df.drop(['diff_order_1'], axis=1)
-y = df['diff_order_1']
+df_2 = df[s+1:].drop(['pollution', 'seasonal_d_o_1'], axis=1)
 
-X = X[s+1:]
-y = y[s+1:]
-X = sm.add_constant(X)
+# corr = df_2.corr()
+# plt.figure(figsize=(16, 8))
+# sns.heatmap(corr, annot=True, cmap='BrBG')
+# plt.title('Correlation Heatmap', fontsize=18)
+# plt.show()
+
+X = df_2.drop(['diff_order_1'], axis=1)
+y = df_2['diff_order_1']
+
 X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=False, test_size=0.2)
+col_list = X_train.columns.to_list()
 
 print(f'Training set size: {len(X_train)} rows and {len(X_train.columns)+1} columns')
 print(f'Testing set size: {len(X_test)} rows and {len(X_test.columns)+1} columns')
 
-# %%
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
-# # from statsmodels.tsa.holtwinters import ExponentialSmoothing
-# #
-# # model_holt_winters = ExponentialSmoothing(df['diff_order_1'], seasonal_periods=s).fit(optimized=True)
-# # #forecasts_holt_winters = model_holt_winters.forecast(len(test))
-# #
-#
-# from statsmodels.tsa.holtwinters import ExponentialSmoothing
-# model = ExponentialSmoothing(df['diff_order_1'][s+1:]).fit()
-#
-# # make predictions
-# pred = model.predict(start='2023-05-01', end='2023-12-31')
+X_train = pd.DataFrame(X_train, columns=col_list)
+X_test = pd.DataFrame(X_test, columns=col_list)
 
-# # df['rev_seasonal_d_o_1'] = [np.nan] * s + toolkit.rev_differencing(df['diff_order_1'][s+1:], df['seasonal_d_o_1'][s], order=1)
-# # print(df.head(50))
-# # print('-----')
-# # print(df.tail(50))
-# # df['rev_pollution'] = toolkit.rev_seasonal_differencing(df['rev_seasonal_d_o_1'][s:], df['pollution'][:s], seasons=s)
-# # print(df.head(50))
-#
+X1 = X_train.to_numpy()
+H = np.dot(X1.T, X1)
+u, s, vh = np.linalg.svd(H)
+print('Singular values =', s)
+print('Condition number is', round(np.linalg.cond(X1), 2))
 
-#
-# # plot results
-# plt.figure(figsize=(12,6))
-# plt.plot(df.index, df['pollution'], label='Actual')
-# plt.plot(pred.index, pred.values, label='Forecast')
-# plt.legend()
-# plt.title('Holt-Winters Forecast')
-# plt.xlabel('Date')
-# plt.ylabel('Value')
-# plt.show()
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+
+#calculate VIF for each explanatory variable
+vif = pd.DataFrame()
+vif['VIF'] = [variance_inflation_factor(X_train.values, i) for i in range(X_train.shape[1])]
+vif['variable'] = X_train.columns
+
+#view VIF for each explanatory variable
+print(vif)
+
+
 
 # %%
+############### Feature selection
+X_train_t = sm.add_constant(X_train, prepend=True)
+X_test_t = sm.add_constant(X_test, prepend=True)
 
-# Base Models
+model_ols = sm.OLS(list(y_train), X_train_t).fit()
+print(model_ols.summary())
 
-avg = toolkit.base_method('Average', y, len(y_train))
-naive = toolkit.base_method('Naive', y, len(y_train))
-drift = toolkit.base_method('Drift', y, len(y_train))
-ses_point5 = toolkit.base_method('SES', y, len(y_train), 0.5)
+# %%
+
+X_train_t = X_train_t.drop(['temp'], axis=1)
+model_ols = sm.OLS(list(y_train), X_train_t).fit()
+print(model_ols.summary())
+
+# %%
+X_train_t = X_train_t.drop(['snow'], axis=1)
+model_ols = sm.OLS(list(y_train), X_train_t).fit()
+print(model_ols.summary())
+
+
+
+# Final Model
+# %%
+X_train = sm.add_constant(X_train, prepend=True)
+X_test = sm.add_constant(X_test, prepend=True)
+
+model_ols = sm.OLS(list(y_train), X_train).fit()
+print(model_ols.summary())
+
+
+y_pred = model_ols.predict(X_train)
+X_test = X_test[X_train.columns.to_list()]
+y_forecast = model_ols.predict(X_test)
+
+df_final = pd.DataFrame(list(zip(pd.concat([y_train, y_test], axis=0), pd.concat([y_pred, y_forecast], axis=0))), columns=['y', 'y_pred'])
+toolkit.plot_forecast(df_final, len(y_train), title_body='Forecast using OLS method', xlabel='Time', ylabel='Pollution')
+e, e_sq, MSE_train, VAR_train, MSE_test, VAR_test, mean_res_train = toolkit.cal_errors(df_final['y'].to_list(), df_final['y_pred'].to_list(), len(y_train), 0)
+lags=50
+
+
+method_name = 'Multi linear Regression'
+q_value = toolkit.Cal_q_value(e[:len(y_train)], lags, len(y_train), 2)
+print('Error values using {} method'.format(method_name))
+print('MSE Prediction data: ', round(MSE_train, 2))
+print('MSE Forecasted data: ', round(MSE_test, 2))
+print('Variance Prediction data: ', round(VAR_train, 2))
+print('Variance Forecasted data: ', round(VAR_test, 2))
+print('mean_res_train: ', round(mean_res_train, 2))
+print('Q-value: ', round(q_value, 2))
+l_err = [[method_name, MSE_train, MSE_test, VAR_train, VAR_test, mean_res_train, q_value]]
+print(l_err)
+df_err2 = pd.DataFrame(l_err, columns=['method_name', 'MSE_train', 'MSE_test', 'VAR_train', 'VAR_test', 'mean_res_train', 'Q-value'])
+df_err = pd.concat([df_err, df_err2], ignore_index=True)
+
+title='ACF Plot for errors - OLS method'
+toolkit.Cal_autocorr_plot(e[:len(y_train)], lags, title)
+
+print('T-Test')
+print(model_ols.pvalues)
+print('\nF-Test')
+print(model_ols.f_pvalue)
+
+
+print(df_err)
 
 
 
 # %%
 lags = 50
 round_off = 3
-ry = sm.tsa.stattools.acf(df['diff_order_1'][s+1:], nlags=lags)
+ry = sm.tsa.stattools.acf(y_train, nlags=lags)
 toolkit.gpac(ry, j_max=10, k_max=10, round_off=round_off)
-
-
-#
-# # %%
-# ############### Feature selection
-# X_train = X_train.drop(['pollution', 'seasonal_d_o_1'], axis=1)
-# model_ols = sm.OLS(y_train, X_train).fit()
-# print(model_ols.summary())
-#
-# ##########
-#
-# # %%
-#
-# X_train = X_train.drop(['temp'], axis=1)
-# model_ols = sm.OLS(y_train, X_train).fit()
-# print(model_ols.summary())
-#
-# # %%
-# X_train = X_train.drop(['wnd_spd'], axis=1)
-# model_ols = sm.OLS(y_train, X_train).fit()
-# print(model_ols.summary())
-#
-# # %%
-# X_train = X_train.drop(['snow'], axis=1)
-# model_ols = sm.OLS(y_train, X_train).fit()
-# print(model_ols.summary())
-#
-# # %%
-# from statsmodels.stats.outliers_influence import variance_inflation_factor
-#
-# #calculate VIF for each explanatory variable
-# vif = pd.DataFrame()
-# vif['VIF'] = [variance_inflation_factor(X_train.values, i) for i in range(X_train.shape[1])]
-# vif['variable'] = X_train.columns
-#
-# #view VIF for each explanatory variable
-# print(vif)

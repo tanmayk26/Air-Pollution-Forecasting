@@ -57,12 +57,13 @@ def differencing(series, order=1):
 
 
 def rev_differencing(series, first_obs, order=1):
+    series.reset_index(inplace=True, drop=True)
     rev_diff = []
     for i in range(order-1):
         rev_diff.append(np.nan)
     rev_diff.append(first_obs)
     for i in range(order, len(series)+1):
-        rev_diff.append(series[i-1] + rev_diff[i - 1])
+        rev_diff.append(series[i-1] + rev_diff[i-1])
     return rev_diff
 
 
@@ -77,6 +78,7 @@ def seasonal_differencing(series, seasons=1):
 
 
 def rev_seasonal_differencing(series, first_obs, seasons=1):
+    series.reset_index(inplace=True, drop=True)
     rev_diff = list(first_obs)
     for i in range(len(series)):
         rev_diff.append(series[i] + rev_diff[i])
@@ -170,6 +172,17 @@ def base_method(method_name, y, train_n, alpha=0.5):
         y_pred = drift(y, train_n)
     elif method_name == 'SES':
         y_pred = SES(y, train_n, alpha)
+    elif method_name == 'Holt-Winters':
+        from statsmodels.tsa.holtwinters import ExponentialSmoothing
+        model = ExponentialSmoothing(y).fit()
+        #model = ExponentialSmoothing(y, seasonal_periods=24).fit()
+        #model = ExponentialSmoothing(y, seasonal_periods=24).fit()
+        #model = ExponentialSmoothing(y, seasonal_periods=24).fit()
+        #model = ExponentialSmoothing(y, seasonal_periods=24).fit()
+
+        pred_train_holts = model.predict(start=0, end=(train_n - 1))
+        pred_test_holts = model.forecast(steps=len(y)-train_n)
+        y_pred = pred_train_holts + pred_test_holts
     e_avg, e_sq, MSE_train, VAR_train, MSE_test, VAR_test, mean_res_train = cal_errors(y, y_pred, train_n, 2)
     df = pd.DataFrame(list(zip(y, y_pred, e_avg, e_sq)), columns=['y', 'y_pred', 'e', 'e^2'])
     print(df)
@@ -178,13 +191,19 @@ def base_method(method_name, y, train_n, alpha=0.5):
         plot_forecast(df, train_n, method_name, 'Yes', title_suffix)
     else:
         plot_forecast(df, train_n, method_name)
+    lags = 50
+    q_value = Cal_q_value(e_avg[:train_n], lags, train_n, 2)
     print('Error values using {} method'.format(method_name))
     print('MSE Prediction data: ', round(MSE_train, 2))
     print('MSE Forecasted data: ', round(MSE_test, 2))
     print('Variance Prediction data: ', round(VAR_train, 2))
     print('Variance Forecasted data: ', round(VAR_test, 2))
     print('mean_res_train: ', round(mean_res_train, 2))
-    return df
+    print('Q-value: ', round(q_value, 2))
+    l_err = [[method_name, MSE_train, MSE_test, VAR_train, VAR_test, mean_res_train, q_value]]
+    print(l_err)
+    df_err = pd.DataFrame(l_err, columns=['method_name', 'MSE_train', 'MSE_test', 'VAR_train', 'VAR_test', 'mean_res_train', 'Q-value'])
+    return df_err
 
 
 def average(y, n):
@@ -223,6 +242,10 @@ def SES(y, n, alpha):
     for i in range(n, len(y)):
         y_pred[i] = alpha * y[n-1] + (1-alpha) * y_pred[n-1]
     return y_pred
+
+
+
+
 
 
 def cal_errors(y, y_pred, n, skip_first_n_obs=0):
@@ -712,7 +735,7 @@ def plot_sse(sse_list, model_name):
 
 def STL_decomposition(data, column_name):
     series = pd.Series(data[column_name].values, index = data.index.values, name = column_name)
-    STL_tf = STL(series)
+    STL_tf = STL(series, period=24)
     res = STL_tf.fit()
     T = res.trend
     S = res.seasonal
