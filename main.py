@@ -61,20 +61,20 @@ plt.show()
 # print(f'Testing set size: {len(X_test)} rows and {len(X_test.columns)+1} columns')
 
 # Plotting dependent variable vs time
-# toolkit.plot_graph(x_value=df.index.values, y_value=df['pollution'], xlabel='Time', ylabel='Pollution', title='Pollution over Time')
+toolkit.plot_graph(x_value=df.index.values, y_value=df['pollution'], xlabel='Time', ylabel='Pollution', title='Pollution over Time')
 
 # ACF/PACF plot raw data
 toolkit.ACF_PACF_Plot(df['pollution'], lags=60)
 
 # Stationarity Tests on raw data
-# print('ADF test on pollution:-')
-# toolkit.ADF_Cal(df['pollution'])
-# print('KPSS test on pollution:-')
-# toolkit.kpss_test(df['pollution'])
-# toolkit.CalRollingMeanVarGraph(df, 'pollution')
+print('ADF test on pollution:-')
+toolkit.ADF_Cal(df['pollution'])
+print('KPSS test on pollution:-')
+toolkit.kpss_test(df['pollution'])
+toolkit.CalRollingMeanVarGraph(df, 'pollution')
 
 # STL Decomposition
-# toolkit.STL_decomposition(df, 'pollution')
+toolkit.STL_decomposition(df, 'pollution')
 
 # Seasonal Differencing
 s = 24
@@ -83,21 +83,21 @@ print(f'Performing Seasonal Differencing with interval={s}')
 df['seasonal_d_o_1'] = toolkit.seasonal_differencing(df['pollution'], seasons=s)
 
 # Plotting dependent variable vs time
-# toolkit.plot_graph(x_value=df.index.values, y_value=df['seasonal_d_o_1'], xlabel='Time', ylabel='seasonal_d_o_1', title='Pollution over Time')
+toolkit.plot_graph(x_value=df.index.values, y_value=df['seasonal_d_o_1'], xlabel='Time', ylabel='seasonal_d_o_1', title='Pollution over Time')
 
 # ACF/PACF plot seasonaly differenced data
 toolkit.ACF_PACF_Plot(df['seasonal_d_o_1'][s:], lags=60)
 
 # Stationarity on seasonaly differenced data
-# print('ADF test on seasonal_d_o_1:-')
-# toolkit.ADF_Cal(df['seasonal_d_o_1'][s:])
-# print('KPSS test on seasonal_d_o_1:-')
-# toolkit.kpss_test(df['seasonal_d_o_1'][s:])
-# toolkit.CalRollingMeanVarGraph(df[s:], 'seasonal_d_o_1')
+print('ADF test on seasonal_d_o_1:-')
+toolkit.ADF_Cal(df['seasonal_d_o_1'][s:])
+print('KPSS test on seasonal_d_o_1:-')
+toolkit.kpss_test(df['seasonal_d_o_1'][s:])
+toolkit.CalRollingMeanVarGraph(df[s:], 'seasonal_d_o_1')
 
 # STL Decomposition
 
-# toolkit.STL_decomposition(df[s:], 'seasonal_d_o_1')
+toolkit.STL_decomposition(df[s:], 'seasonal_d_o_1')
 
 # Doing a non-seasonal differencing after the seasonal differrencing
 # Transforming data to make it stationary
@@ -105,20 +105,20 @@ print('Performing Non-Seasonal Differencing with interval=1')
 df['diff_order_1'] = toolkit.differencing(df['seasonal_d_o_1'], s)
 
 # Plotting dependent variable vs time
-# toolkit.plot_graph(x_value=df.index.values, y_value=df['diff_order_1'], xlabel='Time', ylabel='diff_order_1', title='Pollution over Time')
+toolkit.plot_graph(x_value=df.index.values, y_value=df['diff_order_1'], xlabel='Time', ylabel='diff_order_1', title='Pollution over Time')
 
 # ACF/PACF plot transformed data
 toolkit.ACF_PACF_Plot(df['diff_order_1'][s+1:], lags=60)
 
 # Stationarity Tests on transformed data
-# toolkit.CalRollingMeanVarGraph(df[s+1:], 'diff_order_1')
-# print('ADF test on diff_order_1:-')
-# toolkit.ADF_Cal(df['diff_order_1'][s+1:])
-# print('KPSS test on diff_order_1:-')
-# toolkit.kpss_test(df['diff_order_1'][s+1:])
+toolkit.CalRollingMeanVarGraph(df[s+1:], 'diff_order_1')
+print('ADF test on diff_order_1:-')
+toolkit.ADF_Cal(df['diff_order_1'][s+1:])
+print('KPSS test on diff_order_1:-')
+toolkit.kpss_test(df['diff_order_1'][s+1:])
 
 # STL Decomposition
-# toolkit.STL_decomposition(df[s+1:], 'diff_order_1')
+toolkit.STL_decomposition(df[s+1:], 'diff_order_1')
 
 
 # %%
@@ -210,29 +210,49 @@ X_train_t = X_train_t.drop(['snow'], axis=1)
 model_ols = sm.OLS(list(y_train), X_train_t).fit()
 print(model_ols.summary())
 
+# %%
+X_train_t = X_train_t.drop(['wnd_spd'], axis=1)
+model_ols = sm.OLS(list(y_train), X_train_t).fit()
+print(model_ols.summary())
+
+# %%
+X_train_t = X_train_t.drop(['wnd_dir'], axis=1)
+model_ols = sm.OLS(list(y_train), X_train_t).fit()
+print(model_ols.summary())
+
+# %%
+X_train_t = X_train_t.drop(['dew'], axis=1)
+model_ols = sm.OLS(list(y_train), X_train_t).fit()
+print(model_ols.summary())
 
 
 # Final Model
 # %%
-X_train = sm.add_constant(X_train, prepend=True)
-X_test = sm.add_constant(X_test, prepend=True)
+# X_train = sm.add_constant(X_train, prepend=True)
+# X_test = sm.add_constant(X_test, prepend=True)
 
-model_ols = sm.OLS(list(y_train), X_train).fit()
+# model_ols = sm.OLS(list(y_train), X_train).fit()
+# print(model_ols.summary())
+# y_pred = model_ols.predict(X_train)
+# X_test = X_test[X_train.columns.to_list()]
+# y_forecast = model_ols.predict(X_test)
+
+model_ols = sm.OLS(list(y_train), X_train_t).fit()
 print(model_ols.summary())
+y_pred = model_ols.predict(X_train_t)
+X_test_t = X_test_t[X_train_t.columns.to_list()]
+y_forecast = model_ols.predict(X_test_t)
 
-
-y_pred = model_ols.predict(X_train)
-X_test = X_test[X_train.columns.to_list()]
-y_forecast = model_ols.predict(X_test)
 
 df_final = pd.DataFrame(list(zip(pd.concat([y_train, y_test], axis=0), pd.concat([y_pred, y_forecast], axis=0))), columns=['y', 'y_pred'])
 toolkit.plot_forecast(df_final, len(y_train), new_index_df, title_body='Forecast using OLS method', xlabel='Time', ylabel='Pollution')
 e, e_sq, MSE_train, VAR_train, MSE_test, VAR_test, mean_res_train = toolkit.cal_errors(df_final['y'].to_list(), df_final['y_pred'].to_list(), len(y_train), 0)
+
 lags=50
 
 
 method_name = 'Multi-linear Regression'
-q_value = toolkit.Cal_q_value(e[:len(y_train)], lags, len(y_train), 2)
+q_value = sm.stats.acorr_ljungbox(e[:len(y_train)], lags=[50], boxpierce=True, return_df=True)['bp_stat'].values[0]
 print('Error values using {} method'.format(method_name))
 print('MSE Prediction data: ', round(MSE_train, 2))
 print('MSE Forecasted data: ', round(MSE_test, 2))
@@ -240,13 +260,16 @@ print('Variance Prediction data: ', round(VAR_train, 2))
 print('Variance Forecasted data: ', round(VAR_test, 2))
 print('mean_res_train: ', round(mean_res_train, 2))
 print('Q-value: ', round(q_value, 2))
-l_err = [[method_name, MSE_train, MSE_test, VAR_train, VAR_test, mean_res_train, q_value]]
+var_f_vs_r = round(VAR_test / VAR_train, 2)
+print(f'var(forecast errors)/var(Residual errors): {var_f_vs_r:.2f}')
+
+l_err = [[method_name, MSE_train, MSE_test, VAR_train, VAR_test, mean_res_train, q_value, var_f_vs_r]]
 print(l_err)
-df_err2 = pd.DataFrame(l_err, columns=['method_name', 'MSE_train', 'MSE_test', 'VAR_train', 'VAR_test', 'mean_res_train', 'Q-value'])
+df_err2 = pd.DataFrame(l_err, columns=['method_name', 'MSE_train', 'MSE_test', 'VAR_train', 'VAR_test', 'mean_res_train', 'Q-value', 'Var_test vs Var_train'])
 df_err = pd.concat([df_err, df_err2], ignore_index=True)
 
 title='ACF Plot for errors - OLS method'
-toolkit.Cal_autocorr_plot(e[:len(y_train)], lags, title)
+toolkit.Cal_autocorr_plot(model_ols.resid, lags, title)
 
 print('T-Test')
 print(model_ols.pvalues)
@@ -259,12 +282,27 @@ print(df_err)
 
 
 # %%
-lags = 50
-round_off = 3
+lags = 100
+round_off = 2
 ry = sm.tsa.stattools.acf(y_train, nlags=lags)
-toolkit.gpac(ry, j_max=12, k_max=12, round_off=round_off)
+toolkit.gpac(ry, j_max=30, k_max=30, round_off=round_off)
 
 
+# %%
+
+model = sm.tsa.ARIMA(y_train, order=(0,0,0), seasonal_order=(1,0,0,24))
+model_fit = model.fit()
+print(model_fit.summary())
+y_result_hat = model_fit.predict()
+y_result_h_t = model_fit.forecast(steps=len(y_test))
+res_e = y_train - y_result_hat
+fore_error = y_test - y_result_h_t
+
+var_f_vs_r = round(np.var(fore_error)/np.var(res_e), 2)
+
+print(f'variance of forecast errors is = {np.var(fore_error):.2f}')
+print(f'variance of residual errors is = {np.var(res_e):.2f}')
+print(f'var(forecast errors)/var(Residual errors): {var_f_vs_r:.2f}')
 
 # %%
 # model = sm.tsa.ARIMA(df['pollution'][:len(df_train)], order=(0,1,0), seasonal_order=(0,1,1,24))
@@ -276,6 +314,7 @@ toolkit.gpac(ry, j_max=12, k_max=12, round_off=round_off)
 # fore_error = df['pollution'][len(df_train):] - y_result_h_t
 
 
+
 model = sm.tsa.ARIMA(y_train, order=(0,0,0), seasonal_order=(0,0,1,24))
 model_fit = model.fit()
 print(model_fit.summary())
@@ -284,10 +323,43 @@ y_result_h_t = model_fit.forecast(steps=len(y_test))
 res_e = y_train - y_result_hat
 fore_error = y_test - y_result_h_t
 
+var_f_vs_r = round(np.var(fore_error)/np.var(res_e), 2)
 
 print(f'variance of forecast errors is = {np.var(fore_error):.2f}')
 print(f'variance of residual errors is = {np.var(res_e):.2f}')
-print(f'Variance of forecast errors vs variance of Residual errors: {np.var(fore_error)/np.var(res_e):.2f}')
+print(f'var(forecast errors)/var(Residual errors): {var_f_vs_r:.2f}')
+
+
+
+
+
+df_final = pd.DataFrame(list(zip(pd.concat([y_train, y_test], axis=0), pd.concat([y_result_hat, y_result_h_t], axis=0))), columns=['y', 'y_pred'])
+toolkit.plot_forecast(df_final, len(y_train), new_index_df, title_body='Forecast using SARIMA', xlabel='Time', ylabel='Pollution')
+e, e_sq, MSE_train, VAR_train, MSE_test, VAR_test, mean_res_train = toolkit.cal_errors(df_final['y'].to_list(), df_final['y_pred'].to_list(), len(y_train), 0)
+
+lags=50
+
+
+method_name = 'SARIMA'
+q_value = sm.stats.acorr_ljungbox(e[:len(y_train)], lags=[50], boxpierce=True, return_df=True)['bp_stat'].values[0]
+#print(f"Q-Value for training set Method) : ", np.round(Q, 2))
+#q_value = toolkit.Cal_q_value(e[:len(y_train)], lags, len(y_train), 2)
+print('Error values using {} method'.format(method_name))
+print('MSE Prediction data: ', round(MSE_train, 2))
+print('MSE Forecasted data: ', round(MSE_test, 2))
+print('Variance Prediction data: ', round(VAR_train, 2))
+print('Variance Forecasted data: ', round(VAR_test, 2))
+print('mean_res_train: ', round(mean_res_train, 2))
+print('Q-value: ', round(q_value, 2))
+var_f_vs_r = round(VAR_test / VAR_train, 2)
+print(f'var(forecast errors)/var(Residual errors): {var_f_vs_r:.2f}')
+
+l_err = [[method_name, MSE_train, MSE_test, VAR_train, VAR_test, mean_res_train, q_value, var_f_vs_r]]
+print(l_err)
+df_err2 = pd.DataFrame(l_err, columns=['method_name', 'MSE_train', 'MSE_test', 'VAR_train', 'VAR_test', 'mean_res_train', 'Q-value', 'Var_test vs Var_train'])
+df_err = pd.concat([df_err, df_err2], ignore_index=True)
+print(df_err)
+
 
 
 # %%
@@ -319,16 +391,18 @@ import scipy.stats as stats
 
 re = []
 for lag in range(0, lags + 1):
-    re.append(toolkit.Cal_autocorr(res_e, lag))
-toolkit.ACF_PACF_Plot(res_e, lags=20)
-Q = len(y_train)*np.sum(np.square(re[lags:]))
-DOF = lags - 6
-alfa = 0.01
+    re.append(toolkit.Cal_autocorr(model_fit.resid, lag))
+toolkit.ACF_PACF_Plot(re, lags=20)
+Q = sm.stats.acorr_ljungbox(model_fit.resid, lags=[50], boxpierce=True, return_df=True, model_df=1)['bp_stat'].values[0]
+print(f"Q-Value for training set Method) : ", np.round(Q, 2))
+
+DOF = lags - 1
+alfa = 0.05
 chi_critical = stats.chi2.ppf(1-alfa, DOF)
 if Q < chi_critical:
-    print("The residual is white")
+    print(f"As {Q} (Q-value) < {chi_critical} (Chi-sq test) => The residual is white")
 else:
-    print("The residual is NOT white")
+    print(f"As {Q} (Q-value) > {chi_critical} (Chi-sq test) => The residual is NOT white")
 
 results = sm.stats.diagnostic.acorr_ljungbox(model_fit.resid, model_df=1, boxpierce=True, lags=[20])
 print(results)
@@ -346,7 +420,7 @@ print(results)
 plt.plot(list(y_train.index.values + 1), y_train, label='Training dataset')
 plt.plot(list(y_test.index.values + 1), y_test, label='Testing dataset', color='orange')
 plt.plot(list(y_test.index.values + 1), y_result_h_t, label='Forecast',  color='green')
-plt.xlabel('Samples')
+plt.xlabel('Time')
 plt.ylabel('Magnitude')
 plt.title('SARIMA')
 plt.legend()
@@ -355,3 +429,4 @@ plt.show()
 
 
 # Unbiased model
+

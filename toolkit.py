@@ -197,7 +197,9 @@ def base_method(method_name, y, train_n, index_df, alpha=0.5):
     else:
         plot_forecast(df, train_n, index_df, method_name)
     lags = 50
-    q_value = Cal_q_value(e[:train_n], lags, train_n, 2)
+    q_value = sm.stats.acorr_ljungbox(e[2:train_n], lags=[50], boxpierce=True, return_df=True)['bp_stat'].values[0]
+    #q_value = Cal_q_value(e[:train_n], lags, train_n, 2)
+    print(sm.stats.acorr_ljungbox(e[2:train_n], lags=[50], boxpierce=True, return_df=True))
     print('Error values using {} method'.format(method_name))
     print('MSE Prediction data: ', round(MSE_train, 2))
     print('MSE Forecasted data: ', round(MSE_test, 2))
@@ -205,9 +207,13 @@ def base_method(method_name, y, train_n, index_df, alpha=0.5):
     print('Variance Forecasted data: ', round(VAR_test, 2))
     print('mean_res_train: ', round(mean_res_train, 2))
     print('Q-value: ', round(q_value, 2))
-    l_err = [[method_name, MSE_train, MSE_test, VAR_train, VAR_test, mean_res_train, q_value]]
+    var_f_vs_r = round(VAR_test / VAR_train, 2)
+    print(f'var(forecast errors)/var(Residual errors): {var_f_vs_r:.2f}')
+    # title = f'ACF Plot for errors - {method_name}'
+    # Cal_autocorr_plot(e[:train_n], lags, title)
+    l_err = [[method_name, MSE_train, MSE_test, VAR_train, VAR_test, mean_res_train, q_value, var_f_vs_r]]
     print(l_err)
-    df_err = pd.DataFrame(l_err, columns=['method_name', 'MSE_train', 'MSE_test', 'VAR_train', 'VAR_test', 'mean_res_train', 'Q-value'])
+    df_err = pd.DataFrame(l_err, columns=['method_name', 'MSE_train', 'MSE_test', 'VAR_train', 'VAR_test', 'mean_res_train', 'Q-value', 'Var_test vs Var_train'])
     return df_err
 
 
@@ -578,7 +584,7 @@ def gpac(ry, show_heatmap='Yes', j_max=7, k_max=7, round_off=3, seed=6313):
                 phi_j_k = np.nan
             gpac_table[j][k - 1] = phi_j_k #np.linalg.det(phi_num) / np.linalg.det(phi_den)
     if show_heatmap=='Yes':
-        plt.figure(figsize=(16, 8))
+        plt.figure(figsize=(24, 14))
         x_axis_labels = list(range(1, k_max))
         sns.heatmap(gpac_table, annot=True, xticklabels=x_axis_labels, fmt=f'.{round_off}f', vmin=-0.1, vmax=0.1)#, cmap='BrBG'
         plt.title(f'GPAC Table', fontsize=18)
@@ -767,9 +773,9 @@ def STL_decomposition(data, column_name):
     fig = res.plot()
     plt.show()
     str_trend = max(0, 1-(np.var(R)/np.var(T+R)))
-    print(f'The strength of trend for seasonal_d_o_1 is {round(str_trend, 3)}.')
+    print(f'The strength of trend for {column_name} is {round(str_trend, 3)}.')
     str_seasonality = max(0, 1-(np.var(R)/np.var(S+R)))
-    print(f'The strength of seasonality for seasonal_d_o_1 is {round(str_seasonality, 3)}.')
+    print(f'The strength of seasonality for {column_name} is {round(str_seasonality, 3)}.')
 
 
 def plot_graph(x_value, y_value, xlabel='Time', ylabel='Magnitude', title='Samples over Time'):
