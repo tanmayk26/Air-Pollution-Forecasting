@@ -11,6 +11,7 @@ import toolkit
 # to display all the columns
 pd.set_option('display.max_columns', None)
 #pd.set_option('display.max_rows', None)
+np.random.seed(6313)
 
 url = 'https://raw.githubusercontent.com/tanmayk26/Air-Pollution-Forecasting/main/LSTM-Multivariate_pollution.csv'
 df = pd.read_csv(url, index_col='date')
@@ -63,7 +64,7 @@ plt.show()
 # toolkit.plot_graph(x_value=df.index.values, y_value=df['pollution'], xlabel='Time', ylabel='Pollution', title='Pollution over Time')
 
 # ACF/PACF plot raw data
-# toolkit.ACF_PACF_Plot(df['pollution'], lags=60)
+toolkit.ACF_PACF_Plot(df['pollution'], lags=60)
 
 # Stationarity Tests on raw data
 # print('ADF test on pollution:-')
@@ -85,7 +86,7 @@ df['seasonal_d_o_1'] = toolkit.seasonal_differencing(df['pollution'], seasons=s)
 # toolkit.plot_graph(x_value=df.index.values, y_value=df['seasonal_d_o_1'], xlabel='Time', ylabel='seasonal_d_o_1', title='Pollution over Time')
 
 # ACF/PACF plot seasonaly differenced data
-# toolkit.ACF_PACF_Plot(df['seasonal_d_o_1'][s:], lags=60)
+toolkit.ACF_PACF_Plot(df['seasonal_d_o_1'][s:], lags=60)
 
 # Stationarity on seasonaly differenced data
 # print('ADF test on seasonal_d_o_1:-')
@@ -124,17 +125,20 @@ toolkit.ACF_PACF_Plot(df['diff_order_1'][s+1:], lags=60)
 
 # Train-Test Split
 df.index.freq = 'H'
+index_df = df.index
+new_index_df = index_df[s+1:]
 df_train, df_test = train_test_split(df, shuffle=False, test_size=0.20)
 print(f'Training set size: {len(df_train)} rows and {len(df_train.columns)+1} columns')
 print(f'Testing set size: {len(df_test)} rows and {len(df_test.columns)+1} columns')
 
 # Base Models
 
-holt_winters = toolkit.base_method('Holt-Winters', df['pollution'], len(df_train))
-df_err = toolkit.base_method('Average', df['diff_order_1'][s+1:], len(df_train))
-naive = toolkit.base_method('Naive', df['diff_order_1'][s+1:], len(df_train))
-drift = toolkit.base_method('Drift', df['diff_order_1'][s+1:], len(df_train))
-ses_point5 = toolkit.base_method('SES', df['diff_order_1'][s+1:], len(df_train), 0.5)
+#holt_winters = toolkit.base_method('Holt-Winters', df['pollution'], len(df_train))
+df_err = toolkit.base_method('Average', df['diff_order_1'][s+1:], len(df_train), index_df[s+1:])
+naive = toolkit.base_method('Naive', df['diff_order_1'][s+1:], len(df_train), index_df[s+1:])
+drift = toolkit.base_method('Drift', df['diff_order_1'][s+1:], len(df_train), index_df[s+1:])
+ses_point5 = toolkit.base_method('SES', df['diff_order_1'][s+1:], len(df_train), index_df[s+1:], 0.5)
+holt_winters = toolkit.base_method('Holt-Winters', df['diff_order_1'][s+1:], len(df_train), index_df[s+1:])
 
 df_err = pd.concat([df_err, naive], ignore_index=True)
 df_err = pd.concat([df_err, drift], ignore_index=True)
@@ -222,7 +226,7 @@ X_test = X_test[X_train.columns.to_list()]
 y_forecast = model_ols.predict(X_test)
 
 df_final = pd.DataFrame(list(zip(pd.concat([y_train, y_test], axis=0), pd.concat([y_pred, y_forecast], axis=0))), columns=['y', 'y_pred'])
-toolkit.plot_forecast(df_final, len(y_train), title_body='Forecast using OLS method', xlabel='Time', ylabel='Pollution')
+toolkit.plot_forecast(df_final, len(y_train), new_index_df, title_body='Forecast using OLS method', xlabel='Time', ylabel='Pollution')
 e, e_sq, MSE_train, VAR_train, MSE_test, VAR_test, mean_res_train = toolkit.cal_errors(df_final['y'].to_list(), df_final['y_pred'].to_list(), len(y_train), 0)
 lags=50
 
@@ -261,28 +265,25 @@ ry = sm.tsa.stattools.acf(y_train, nlags=lags)
 toolkit.gpac(ry, j_max=12, k_max=12, round_off=round_off)
 
 
+
 # %%
-model = sm.tsa.ARIMA(df['pollution'][:len(df_train)], order=(0,0,0), seasonal_order=(0,1,0,24))
+# model = sm.tsa.ARIMA(df['pollution'][:len(df_train)], order=(0,1,0), seasonal_order=(0,1,1,24))
+# model_fit = model.fit()
+# print(model_fit.summary())
+# y_result_hat = model_fit.predict()
+# y_result_h_t = model_fit.forecast(steps=len(df_test))
+# res_e = df['pollution'][:len(df_train)] - y_result_hat
+# fore_error = df['pollution'][len(df_train):] - y_result_h_t
+
+
+model = sm.tsa.ARIMA(y_train, order=(0,0,0), seasonal_order=(0,0,1,24))
 model_fit = model.fit()
 print(model_fit.summary())
 y_result_hat = model_fit.predict()
-y_result_h_t = model_fit.forecast(steps=len(df_test))
-res_e = df['pollution'][:len(df_train)] - y_result_hat
-fore_error = df['pollution'][len(df_train):] - y_result_h_t
+y_result_h_t = model_fit.forecast(steps=len(y_test))
+res_e = y_train - y_result_hat
+fore_error = y_test - y_result_h_t
 
-print(f'variance of forecast errors is = {np.var(fore_error):.2f}')
-print(f'variance of residual errors is = {np.var(res_e):.2f}')
-print(f'Variance of forecast errors vs variance of Residual errors: {np.var(fore_error)/np.var(res_e):.2f}')
-
-
-# %%
-model = sm.tsa.ARIMA(df['pollution'][:len(df_train)], order=(0,1,0), seasonal_order=(0,0,1,24))
-model_fit = model.fit()
-print(model_fit.summary())
-y_result_hat = model_fit.predict()
-y_result_h_t = model_fit.forecast(steps=len(df_test))
-res_e = df['pollution'][:len(df_train)] - y_result_hat
-fore_error = df['pollution'][len(df_train):] - y_result_h_t
 
 print(f'variance of forecast errors is = {np.var(fore_error):.2f}')
 print(f'variance of residual errors is = {np.var(res_e):.2f}')
@@ -294,7 +295,7 @@ na = 0
 nb = 1
 model_name = f'ARMA({na}, {nb})'
 
-theta, sse, var_error, covariance_theta_hat, sse_list = toolkit.lm_step3(df['pollution'], na, nb)
+theta, sse, var_error, covariance_theta_hat, sse_list = toolkit.lm_step3(y_train, na, nb)
 
 theta2 = np.array(theta).reshape(-1)
 for i in range(na + nb):
@@ -314,14 +315,43 @@ print(toolkit.lm_find_roots(theta, na, round_off=round_off))
 toolkit.plot_sse(sse_list, '')
 
 
-plt.plot(df['pollution'][len(df_train):].index.values, df['pollution'][len(df_train):], label='Test')
-plt.plot(df['pollution'][len(df_train):].index.values, y_result_h_t, label='h-Step Predictions')
+import scipy.stats as stats
+
+re = []
+for lag in range(0, lags + 1):
+    re.append(toolkit.Cal_autocorr(res_e, lag))
+toolkit.ACF_PACF_Plot(res_e, lags=20)
+Q = len(y_train)*np.sum(np.square(re[lags:]))
+DOF = lags - 6
+alfa = 0.01
+chi_critical = stats.chi2.ppf(1-alfa, DOF)
+if Q < chi_critical:
+    print("The residual is white")
+else:
+    print("The residual is NOT white")
+
+results = sm.stats.diagnostic.acorr_ljungbox(model_fit.resid, model_df=1, boxpierce=True, lags=[20])
+print(results)
+
+
+# plt.plot(df['pollution'][len(df_train):].index.values, df['pollution'][len(df_train):], label='Test')
+# plt.plot(df['pollution'][len(df_train):].index.values, y_result_h_t, label='h-Step Predictions')
+# plt.legend()
+# plt.title('Test vs H-Step Predictions graph')
+# plt.xlabel('Time')
+# plt.ylabel('Value')
+# plt.show()
+
+
+plt.plot(list(y_train.index.values + 1), y_train, label='Training dataset')
+plt.plot(list(y_test.index.values + 1), y_test, label='Testing dataset', color='orange')
+plt.plot(list(y_test.index.values + 1), y_result_h_t, label='Forecast',  color='green')
+plt.xlabel('Samples')
+plt.ylabel('Magnitude')
+plt.title('SARIMA')
 plt.legend()
-plt.title('Test vs H-Step Predictions graph')
-plt.xlabel('Time')
-plt.ylabel('Value')
+plt.tight_layout()
 plt.show()
 
 
-
-
+# Unbiased model

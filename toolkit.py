@@ -162,7 +162,7 @@ def Cal_autocorr_plot(y, lags, title='ACF Plot', plot_show='Yes'):
         plt.show()
 
 
-def base_method(method_name, y, train_n, alpha=0.5):
+def base_method(method_name, y, train_n, index_df, alpha=0.5):
     print(f'\n=== {method_name} Method ===\n')
     if method_name == 'Average':
         y_pred = average(y, train_n)
@@ -191,11 +191,11 @@ def base_method(method_name, y, train_n, alpha=0.5):
     print(df)
     if method_name == 'SES':
         title_suffix = 'with alpha={}'.format(alpha)
-        plot_forecast(df, train_n, method_name, 'Yes', title_suffix)
+        plot_forecast(df, train_n, index_df, method_name, 'Yes', title_suffix)
     elif method_name == 'Holt-Winters':
         holt_winter_plot(y[:train_n], y[train_n:], y_pred[train_n:])
     else:
-        plot_forecast(df, train_n, method_name)
+        plot_forecast(df, train_n, index_df, method_name)
     lags = 50
     q_value = Cal_q_value(e[:train_n], lags, train_n, 2)
     print('Error values using {} method'.format(method_name))
@@ -215,7 +215,9 @@ def holt_winter_plot(train, test, test_predictions):
     train.plot(legend = True, label = 'Training dataset')
     test.plot(legend = True, label = 'Testing dataset', color='orange')
     test_predictions.plot(legend = True, label = 'Forecast',  color='green')
-    plt.title('Train, Test and Predicted Test using Holt Winters')
+    plt.xlabel('Time')
+    plt.ylabel('Magnitude')
+    plt.title('Holt Winters method & forecast')
     plt.tight_layout()
     plt.show()
 
@@ -280,10 +282,15 @@ def cal_errors(y, y_pred, n, skip_first_n_obs=0):
     return e, e_sq, MSE_train, VAR_train, MSE_test, VAR_test, mean_res_train
 
 
-def plot_forecast(df, n, method_name='', plot_show='Yes', title_body='method & forecast', title_suffix='', xlabel='Time', ylabel='Magnitude'):
-    plt.plot(list(df[:n].index.values + 1), df['y'][:n], label='Training dataset')
-    plt.plot(list(df[n:].index.values + 1), df['y'][n:], label='Testing dataset', color='orange')
-    plt.plot(list(df[n:].index.values + 1), df['y_pred'][n:], label='Forecast',  color='green')
+def plot_forecast(df, n, index_df, method_name='', plot_show='Yes', title_body='method & forecast', title_suffix='', xlabel='Time', ylabel='Magnitude'):
+    plt.plot(list(index_df[:n].values + 1), df['y'][:n], label='Training dataset')
+    plt.plot(list(index_df[n:].values + 1), df['y'][n:], label='Testing dataset', color='orange')
+    plt.plot(list(index_df[n:].values + 1), df['y_pred'][n:], label='Forecast',  color='green')
+
+    # plt.plot(list(df[:n].index.values + 1), df['y'][:n], label='Training dataset')
+    # plt.plot(list(df[n:].index.values + 1), df['y'][n:], label='Testing dataset', color='orange')
+    # plt.plot(list(df[n:].index.values + 1), df['y_pred'][n:], label='Forecast', color='green')
+
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.title('{} {} {}'.format(method_name, title_body, title_suffix))
@@ -548,6 +555,7 @@ def ACF_PACF_Plot(y,lags):
     plot_pacf(y, ax=plt.gca(), lags=lags)
     fig.tight_layout(pad=3)
     plt.show()
+    return fig
 
 
 def gpac(ry, show_heatmap='Yes', j_max=7, k_max=7, round_off=3, seed=6313):
