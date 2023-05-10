@@ -358,6 +358,14 @@ l_err = [[method_name, MSE_train, MSE_test, VAR_train, VAR_test, mean_res_train,
 print(l_err)
 df_err2 = pd.DataFrame(l_err, columns=['method_name', 'MSE_train', 'MSE_test', 'VAR_train', 'VAR_test', 'mean_res_train', 'Q-value', 'Var_test vs Var_train'])
 df_err = pd.concat([df_err, df_err2], ignore_index=True)
+
+
+l_err = [['LSTM', 1598.714784, 1191.692833, 1578.959023, 1171.958864, 4.444745, 9111.282413, 0.74]]
+
+df_err2 = pd.DataFrame(l_err, columns=['method_name', 'MSE_train', 'MSE_test', 'VAR_train', 'VAR_test', 'mean_res_train', 'Q-value', 'Var_test vs Var_train'])
+df_err = pd.concat([df_err, df_err2], ignore_index=True)
+
+
 print(df_err)
 
 
