@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.model_selection import train_test_split
 import statsmodels.api as sm
+import scipy.stats as stats
+from sklearn.preprocessing import StandardScaler
+from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 import toolkit
 
@@ -52,13 +55,6 @@ plt.figure(figsize=(16, 8))
 sns.heatmap(corr, annot=True, cmap='BrBG')
 plt.title('Correlation Heatmap', fontsize=18)
 plt.show()
-
-
-# split train-test 80-20
-# X_train, X_test, y_train, y_test = train_test_split(df.iloc[:, 1:], df['pollution'], shuffle=False, test_size=0.2)
-#
-# print(f'Training set size: {len(X_train)} rows and {len(X_train.columns)+1} columns')
-# print(f'Testing set size: {len(X_test)} rows and {len(X_test.columns)+1} columns')
 
 # Plotting dependent variable vs time
 toolkit.plot_graph(x_value=df.index.values, y_value=df['pollution'], xlabel='Time', ylabel='Pollution', title='Pollution over Time')
@@ -133,7 +129,6 @@ print(f'Testing set size: {len(df_test)} rows and {len(df_test.columns)+1} colum
 
 # Base Models
 
-#holt_winters = toolkit.base_method('Holt-Winters', df['pollution'], len(df_train))
 df_err = toolkit.base_method('Average', df['diff_order_1'][s+1:], len(df_train), index_df[s+1:])
 naive = toolkit.base_method('Naive', df['diff_order_1'][s+1:], len(df_train), index_df[s+1:])
 drift = toolkit.base_method('Drift', df['diff_order_1'][s+1:], len(df_train), index_df[s+1:])
@@ -151,12 +146,6 @@ print('===Model Comparison===\n', df_err)
 # %%
 df_2 = df[s+1:].drop(['pollution', 'seasonal_d_o_1'], axis=1)
 
-# corr = df_2.corr()
-# plt.figure(figsize=(16, 8))
-# sns.heatmap(corr, annot=True, cmap='BrBG')
-# plt.title('Correlation Heatmap', fontsize=18)
-# plt.show()
-
 X = df_2.drop(['diff_order_1'], axis=1)
 y = df_2['diff_order_1']
 
@@ -166,7 +155,7 @@ col_list = X_train.columns.to_list()
 print(f'Training set size: {len(X_train)} rows and {len(X_train.columns)+1} columns')
 print(f'Testing set size: {len(X_test)} rows and {len(X_test.columns)+1} columns')
 
-from sklearn.preprocessing import StandardScaler
+
 scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
@@ -180,7 +169,6 @@ u, s, vh = np.linalg.svd(H)
 print('Singular values =', s)
 print('Condition number is', round(np.linalg.cond(X1), 2))
 
-from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 #calculate VIF for each explanatory variable
 vif = pd.DataFrame()
@@ -228,14 +216,6 @@ print(model_ols.summary())
 
 # Final Model
 # %%
-# X_train = sm.add_constant(X_train, prepend=True)
-# X_test = sm.add_constant(X_test, prepend=True)
-
-# model_ols = sm.OLS(list(y_train), X_train).fit()
-# print(model_ols.summary())
-# y_pred = model_ols.predict(X_train)
-# X_test = X_test[X_train.columns.to_list()]
-# y_forecast = model_ols.predict(X_test)
 
 model_ols = sm.OLS(list(y_train), X_train_t).fit()
 print(model_ols.summary())
@@ -243,13 +223,11 @@ y_pred = model_ols.predict(X_train_t)
 X_test_t = X_test_t[X_train_t.columns.to_list()]
 y_forecast = model_ols.predict(X_test_t)
 
-
 df_final = pd.DataFrame(list(zip(pd.concat([y_train, y_test], axis=0), pd.concat([y_pred, y_forecast], axis=0))), columns=['y', 'y_pred'])
 toolkit.plot_forecast(df_final, len(y_train), new_index_df, title_body='Forecast using OLS method', xlabel='Time', ylabel='Pollution')
 e, e_sq, MSE_train, VAR_train, MSE_test, VAR_test, mean_res_train = toolkit.cal_errors(df_final['y'].to_list(), df_final['y_pred'].to_list(), len(y_train), 0)
 
 lags=50
-
 
 method_name = 'Multi-linear Regression'
 q_value = sm.stats.acorr_ljungbox(e[:len(y_train)], lags=[50], boxpierce=True, return_df=True)['bp_stat'].values[0]
@@ -276,17 +254,13 @@ print(model_ols.pvalues)
 print('\nF-Test')
 print(model_ols.f_pvalue)
 
-
 print(df_err)
-
-
 
 # %%
 lags = 100
 round_off = 2
 ry = sm.tsa.stattools.acf(y_train, nlags=lags)
 toolkit.gpac(ry, j_max=30, k_max=30, round_off=round_off)
-
 
 # %%
 
@@ -304,16 +278,13 @@ print(f'variance of forecast errors is = {np.var(fore_error):.2f}')
 print(f'variance of residual errors is = {np.var(res_e):.2f}')
 print(f'var(forecast errors)/var(Residual errors): {var_f_vs_r:.2f}')
 
+re = []
+for lag in range(0, lags + 1):
+    re.append(toolkit.Cal_autocorr(model_fit.resid, lag))
+toolkit.ACF_PACF_Plot(re, lags=20)
+
+
 # %%
-# model = sm.tsa.ARIMA(df['pollution'][:len(df_train)], order=(0,1,0), seasonal_order=(0,1,1,24))
-# model_fit = model.fit()
-# print(model_fit.summary())
-# y_result_hat = model_fit.predict()
-# y_result_h_t = model_fit.forecast(steps=len(df_test))
-# res_e = df['pollution'][:len(df_train)] - y_result_hat
-# fore_error = df['pollution'][len(df_train):] - y_result_h_t
-
-
 
 model = sm.tsa.ARIMA(y_train, order=(0,0,0), seasonal_order=(0,0,1,24))
 model_fit = model.fit()
@@ -329,21 +300,14 @@ print(f'variance of forecast errors is = {np.var(fore_error):.2f}')
 print(f'variance of residual errors is = {np.var(res_e):.2f}')
 print(f'var(forecast errors)/var(Residual errors): {var_f_vs_r:.2f}')
 
-
-
-
-
 df_final = pd.DataFrame(list(zip(pd.concat([y_train, y_test], axis=0), pd.concat([y_result_hat, y_result_h_t], axis=0))), columns=['y', 'y_pred'])
 toolkit.plot_forecast(df_final, len(y_train), new_index_df, title_body='Forecast using SARIMA', xlabel='Time', ylabel='Pollution')
 e, e_sq, MSE_train, VAR_train, MSE_test, VAR_test, mean_res_train = toolkit.cal_errors(df_final['y'].to_list(), df_final['y_pred'].to_list(), len(y_train), 0)
 
 lags=50
 
-
 method_name = 'SARIMA'
 q_value = sm.stats.acorr_ljungbox(e[:len(y_train)], lags=[50], boxpierce=True, return_df=True)['bp_stat'].values[0]
-#print(f"Q-Value for training set Method) : ", np.round(Q, 2))
-#q_value = toolkit.Cal_q_value(e[:len(y_train)], lags, len(y_train), 2)
 print('Error values using {} method'.format(method_name))
 print('MSE Prediction data: ', round(MSE_train, 2))
 print('MSE Forecasted data: ', round(MSE_test, 2))
@@ -355,20 +319,14 @@ var_f_vs_r = round(VAR_test / VAR_train, 2)
 print(f'var(forecast errors)/var(Residual errors): {var_f_vs_r:.2f}')
 
 l_err = [[method_name, MSE_train, MSE_test, VAR_train, VAR_test, mean_res_train, q_value, var_f_vs_r]]
-print(l_err)
 df_err2 = pd.DataFrame(l_err, columns=['method_name', 'MSE_train', 'MSE_test', 'VAR_train', 'VAR_test', 'mean_res_train', 'Q-value', 'Var_test vs Var_train'])
 df_err = pd.concat([df_err, df_err2], ignore_index=True)
-
 
 l_err = [['LSTM', 1598.714784, 1191.692833, 1578.959023, 1171.958864, 4.444745, 9111.282413, 0.74]]
-
 df_err2 = pd.DataFrame(l_err, columns=['method_name', 'MSE_train', 'MSE_test', 'VAR_train', 'VAR_test', 'mean_res_train', 'Q-value', 'Var_test vs Var_train'])
 df_err = pd.concat([df_err, df_err2], ignore_index=True)
 
-
 print(df_err)
-
-
 
 # %%
 na = 0
@@ -383,19 +341,11 @@ for i in range(na + nb):
         print('The AR coefficient {} is: {:.3f}'.format(i + 1, np.round(theta2[i], 3)))
     else:
         print('The MA coefficient {} is: {:.3f}'.format(i + 1 - na, np.round(theta2[i], 3)))
-
 toolkit.lm_confidence_interval(theta, covariance_theta_hat, na, nb, round_off=round_off)
-
 print("Estimated Covariance Matrix of estimated parameters:\n", np.round(covariance_theta_hat, decimals=round_off))
-
 print("Estimated variance of error:", round(var_error, round_off))
-
 print(toolkit.lm_find_roots(theta, na, round_off=round_off))
-
 toolkit.plot_sse(sse_list, '')
-
-
-import scipy.stats as stats
 
 re = []
 for lag in range(0, lags + 1):
@@ -415,16 +365,6 @@ else:
 results = sm.stats.diagnostic.acorr_ljungbox(model_fit.resid, model_df=1, boxpierce=True, lags=[20])
 print(results)
 
-
-# plt.plot(df['pollution'][len(df_train):].index.values, df['pollution'][len(df_train):], label='Test')
-# plt.plot(df['pollution'][len(df_train):].index.values, y_result_h_t, label='h-Step Predictions')
-# plt.legend()
-# plt.title('Test vs H-Step Predictions graph')
-# plt.xlabel('Time')
-# plt.ylabel('Value')
-# plt.show()
-
-
 plt.plot(list(y_train.index.values + 1), y_train, label='Training dataset')
 plt.plot(list(y_test.index.values + 1), y_test, label='Testing dataset', color='orange')
 plt.plot(list(y_test.index.values + 1), y_result_h_t, label='Forecast',  color='green')
@@ -434,7 +374,3 @@ plt.title('SARIMA')
 plt.legend()
 plt.tight_layout()
 plt.show()
-
-
-# Unbiased model
-
